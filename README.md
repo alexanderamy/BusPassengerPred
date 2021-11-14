@@ -23,3 +23,7 @@ This section lists the different reports that we have written, and describes how
 2. `python run_experiment.py ../data B46`
 
 Or see the `experiment_pipeline/notebooks/example_experiment.ipynb` for an example.
+
+# Streamlit Interface
+1. Install dependencies `pip install -r requirements.txt`
+2. Run streamlit app `streamlit run st_main.py`
