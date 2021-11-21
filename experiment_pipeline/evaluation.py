@@ -26,9 +26,9 @@ class Evaluation:
     self.test = test
     self.stop_dict = stop_dict
 
-    self.stop_stats = global_feature_set[
-        ['next_stop_id', 'passenger_count']
-    ].groupby('next_stop_id').agg({'passenger_count':['mean', 'std']})
+    # self.stop_stats = global_feature_set[
+    #     ['next_stop_id', 'passenger_count']
+    # ].groupby('next_stop_id').agg({'passenger_count':['mean', 'std']})
   
   def basic_eval(self, data, dir=None, segment=None):
     if data == 'train':
@@ -212,31 +212,31 @@ class Evaluation:
     plt.show()
 
 
-  def print_classification_metrics(self, data, dir=None, segment=None, num_stds=1):
-    if data == 'train':
-      df = self.train.copy()
-    elif data == 'val':
-      df = self.val.copy()
-    elif data == 'test':
-      df = self.test.copy()
+  # def print_classification_metrics(self, data, dir=None, segment=None, num_stds=1):
+  #   if data == 'train':
+  #     df = self.train.copy()
+  #   elif data == 'val':
+  #     df = self.val.copy()
+  #   elif data == 'test':
+  #     df = self.test.copy()
 
-    if dir:
-      df = df[df['direction'] == dir]
+  #   if dir:
+  #     df = df[df['direction'] == dir]
 
-    if segment:
-      if type(segment) == str:
-        next_stop_id = segment
-        assert next_stop_id in set(self.stop_dict[dir])
-        df = df[df['next_stop_id'] == next_stop_id]
-      elif type(segment) == int:
-        next_stop_id = self.stop_dict[dir][segment]
-        df = df[df['next_stop_id'] == next_stop_id]
+  #   if segment:
+  #     if type(segment) == str:
+  #       next_stop_id = segment
+  #       assert next_stop_id in set(self.stop_dict[dir])
+  #       df = df[df['next_stop_id'] == next_stop_id]
+  #     elif type(segment) == int:
+  #       next_stop_id = self.stop_dict[dir][segment]
+  #       df = df[df['next_stop_id'] == next_stop_id]
     
-    gt_crowded = is_crowded(df['next_stop_id'], df['passenger_count'], self.stop_stats, num_stds)
-    pred_crowded = is_crowded(df['next_stop_id'], df['passenger_count_pred'], self.stop_stats, num_stds)
+  #   gt_crowded = is_crowded(df['next_stop_id'], df['passenger_count'], self.stop_stats, num_stds)
+  #   pred_crowded = is_crowded(df['next_stop_id'], df['passenger_count_pred'], self.stop_stats, num_stds)
 
-    print('Classification Report:')
-    print(classification_report(gt_crowded, pred_crowded))
-    print('\n')
-    print('Confusion Matrix (0 = not crowded | 1 = crowded):')
-    print(confusion_matrix(gt_crowded, pred_crowded))
+  #   print('Classification Report:')
+  #   print(classification_report(gt_crowded, pred_crowded))
+  #   print('\n')
+  #   print('Confusion Matrix (0 = not crowded | 1 = crowded):')
+  #   print(confusion_matrix(gt_crowded, pred_crowded))
