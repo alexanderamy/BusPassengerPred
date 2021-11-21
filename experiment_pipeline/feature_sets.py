@@ -33,3 +33,18 @@ def feature_set_without_trip_id(dataset):
     non_features =  ['service_date', 'trip_id', 'vehicle_id', 'timestamp', 'prior_stop_id', 'next_stop_id']
 
     return train.drop(columns=non_features), test.drop(columns=non_features)
+
+# # TODO
+# def get_stop_stats(train, test, by_day_type=False, by_hour=False):
+#     train_cols = set(train.columns)
+#     if 'next_stop_id' in train_cols:
+#         train_stop_stats = train[['next_stop_id', 'passenger_count']].groupby('next_stop_id').agg({'passenger_count':['mean', 'std']})
+#         train['avg_stop_passengers'] = train['next_stop_id'].apply(lambda x: train_stop_stats[('passenger_count', 'mean')].loc[x])
+#         test['avg_stop_passengers'] = test['next_stop_id'].apply(lambda x: train_stop_stats[('passenger_count', 'mean')].loc[x])
+
+
+
+def baseline_important_features(train, test):
+    non_features = ['timestamp', 'year', 'day', 'trip_id_comp_6_dig_id']
+
+    return train.drop(columns=non_features), test.drop(columns=non_features)
