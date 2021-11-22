@@ -19,60 +19,66 @@ def is_crowded(stop_ids, passenger_counts, stop_stats, num_stds):
     return crowded
 
 class Evaluation:
-  def __init__(self, global_feature_set=None, train=None, val=None, test=None, stop_dict=None):
-    self.global_feature_set = global_feature_set
+  def __init__(self, global_feature_set=None, train=None, val=None, test=None, stop_id_ls=None, stop_stats=None):
     self.train = train
     self.val = val
     self.test = test
-    self.stop_dict = stop_dict
-
-    # self.stop_stats = global_feature_set[
-    #     ['next_stop_id', 'passenger_count']
-    # ].groupby('next_stop_id').agg({'passenger_count':['mean', 'std']})
+    self.stop_id_ls = stop_id_ls
+    self.stop_pos_ls = [i for (i, _) in enumerate(self.stop_id_ls)]
+    self.stop_id2stop_pos = {stop_id : stop_pos for (stop_id, stop_pos) in zip(self.stop_id_ls, self.stop_pos_ls)}
+    self.stop_pos2stop_id = {stop_pos : stop_id for (stop_id, stop_pos) in zip(self.stop_id_ls, self.stop_pos_ls)}
+    self.stop_stats = stop_stats
+    
   
-  def basic_eval(self, data, dir=None, segment=None):
+  def basic_eval(self, data, segment=None, pretty_print=True):
     if data == 'train':
       df = self.train.copy()
+      df_train = self.train.copy()
     elif data == 'val':
       df = self.val.copy()
+      df_train = self.train.copy()
+
     elif data == 'test':
       df = self.test.copy()
-
-    if dir:
-      df = df[df['direction'] == dir]
+      df_train = self.train.copy()
 
     if segment:
-      if type(segment) == str:
-        next_stop_id = segment
-        assert next_stop_id in set(self.stop_dict[dir])
-        df = df[df['next_stop_id'] == next_stop_id]
-      elif type(segment) == int:
-        next_stop_id = self.stop_dict[dir][segment]
-        df = df[df['next_stop_id'] == next_stop_id]
+      df = df[df['next_stop_id_pos'] == segment]
 
     gt = df['passenger_count']
-    gt_mean = np.zeros_like(gt) + gt.mean()
+    gt_train = df_train['passenger_count']
+    gt_train_mean = np.zeros_like(gt) + gt_train.mean()
     pred = df['passenger_count_pred']
 
     mae_pred = mean_absolute_error(gt, pred)
     max_error_pred = max_error(gt, pred)
     r2_pred = r2_score(gt, pred)
 
-    mae_mean = mean_absolute_error(gt, gt_mean)
-    max_error_mean = max_error(gt, gt_mean)
-    r2_mean = r2_score(gt, gt_mean)
+    mae_mean = mean_absolute_error(gt, gt_train_mean)
+    max_error_mean = max_error(gt, gt_train_mean)
+    r2_mean = r2_score(gt, gt_train_mean)
 
-    print('Performance: Model Prediction')
-    print(f'MAE: {mae_pred:.1f}')
-    print(f'ME : {max_error_pred:.1f}')
-    print(f'R^2: {r2_pred:.2f}')
-    print('\n')
-    print('Performance: Mean Prediction')
-    print(f'MAE: {mae_mean:.1f}')
-    print(f'ME : {max_error_mean:.1f}')
-    print(f'R^2: {r2_mean:.2f}')
+    model_pred_eval = (mae_pred, max_error_pred, r2_pred)
+    mean_pred_eval = (mae_mean, max_error_mean, r2_mean)
+
+    if pretty_print:
+      print('Performance: Model Prediction')
+      print(f'MAE: {mae_pred:.1f}')
+      print(f'ME : {max_error_pred:.1f}')
+      print(f'R^2: {r2_pred:.2f}')
+      print('\n')
+      print('Performance: Mean Prediction')
+      print(f'MAE: {mae_mean:.1f}')
+      print(f'ME : {max_error_mean:.1f}')
+      print(f'R^2: {r2_mean:.2f}')
+
+      return model_pred_eval, mean_pred_eval
     
-  def plot_passenger_count_by_time_of_day(self, data, dir=None, segment=None, agg='sum'):
+    else:
+      return model_pred_eval, mean_pred_eval
+    
+    
+  def plot_passenger_count_by_time_of_day(self, data, segment=None, agg='sum'):
     if data == 'train':
       df = self.train.copy()
     elif data == 'val':
@@ -80,17 +86,8 @@ class Evaluation:
     elif data == 'test':
       df = self.test.copy()
 
-    if dir:
-      df = df[df['direction'] == dir]
-
     if segment:
-      if type(segment) == str:
-        next_stop_id = segment
-        assert next_stop_id in set(self.stop_dict[dir])
-        df = df[df['next_stop_id'] == next_stop_id]
-      elif type(segment) == int:
-        next_stop_id = self.stop_dict[dir][segment]
-        df = df[df['next_stop_id'] == next_stop_id]
+      df = df[df['next_stop_id_pos'] == segment]
 
     hours = list(range(24))
     df['day_type'] = df['timestamp'].apply(lambda x: 'weekday' if x.dayofweek < 5 else 'weekend')
@@ -167,17 +164,13 @@ class Evaluation:
         plt.legend()
         plt.show()
 
-  def gt_pred_scatter(self, data, dir=None, eps=0.1, s=2, lower=None, upper=None):
+  def gt_pred_scatter(self, data, eps=0.1, s=2, lower=None, upper=None):
     if data == 'train':
       df = self.train.copy()
     elif data == 'val':
       df = self.val.copy()
     elif data == 'test':
       df = self.test.copy()
-
-    df = df[df['direction'] == dir]
-    stop_ids_route = self.stop_dict[dir]
-    stop_pos_route = list(range(len(stop_ids_route)))
 
     df['pred_to_gt_ratio'] = (df['passenger_count_pred'] + eps) / (df['passenger_count'] + eps)
 
@@ -203,7 +196,7 @@ class Evaluation:
     plt.scatter(under_est_stop_pos_obs, under_est_gt, s=s, marker='o', color='darkorange')
     plt.scatter(under_est_stop_pos_obs, under_est_gt, s=under_est_ss, marker='o', color='navy')
 
-    plt.xticks(stop_pos_route, stop_ids_route, rotation=90)
+    plt.xticks(self.stop_pos_ls, self.stop_id_ls, rotation=90)
     plt.xlabel('Stop')
     plt.ylabel('Ground Truth Passenger Count')
     legend = plt.legend()

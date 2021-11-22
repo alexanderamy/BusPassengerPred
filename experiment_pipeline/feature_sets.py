@@ -1,50 +1,42 @@
-import pandas as pd
-
-def feature_set_with_trip_id(dataset):
-    train, test = dataset
-    train = pd.get_dummies(train, columns=['route', 'trip_id'])
-
-    # compute average passenger_count by next_stop_id (using training only so as not to bake in information about the test set)
-    train_stop_stats = train[
-        ['next_stop_id', 'passenger_count']
-    ].groupby('next_stop_id').agg({'passenger_count':['mean', 'std']})
-    train['avg_stop_passengers'] = train['next_stop_id'].apply(lambda x: train_stop_stats[('passenger_count', 'mean')].loc[x])
-    test['avg_stop_passengers'] = test['next_stop_id'].apply(lambda x: train_stop_stats[('passenger_count', 'mean')].loc[x])
-
-    test = pd.get_dummies(test, columns=['route'])
-
-    non_features =  ['service_date', 'vehicle_id', 'timestamp', 'prior_stop_id', 'next_stop_id']
-
-    return train.drop(columns=non_features), test.drop(columns=non_features)
-
-def feature_set_without_trip_id(dataset):
-    train, test = dataset
-    train = pd.get_dummies(train, columns=['route'])
-
-    # compute average passenger_count by next_stop_id (using training only so as not to bake in information about the test set)
-    train_stop_stats = train[
-        ['next_stop_id', 'passenger_count']
-    ].groupby('next_stop_id').agg({'passenger_count':['mean', 'std']})
-    train['avg_stop_passengers'] = train['next_stop_id'].apply(lambda x: train_stop_stats[('passenger_count', 'mean')].loc[x])
-    test['avg_stop_passengers'] = test['next_stop_id'].apply(lambda x: train_stop_stats[('passenger_count', 'mean')].loc[x])
-
-    test = pd.get_dummies(test, columns=['route'])
-
-    non_features =  ['service_date', 'trip_id', 'vehicle_id', 'timestamp', 'prior_stop_id', 'next_stop_id']
-
-    return train.drop(columns=non_features), test.drop(columns=non_features)
-
-# # TODO
-# def get_stop_stats(train, test, by_day_type=False, by_hour=False):
-#     train_cols = set(train.columns)
-#     if 'next_stop_id' in train_cols:
-#         train_stop_stats = train[['next_stop_id', 'passenger_count']].groupby('next_stop_id').agg({'passenger_count':['mean', 'std']})
-#         train['avg_stop_passengers'] = train['next_stop_id'].apply(lambda x: train_stop_stats[('passenger_count', 'mean')].loc[x])
-#         test['avg_stop_passengers'] = test['next_stop_id'].apply(lambda x: train_stop_stats[('passenger_count', 'mean')].loc[x])
+def compute_stop_stats(train, test):
+    # compute stop statistics using train set only
+    stop_stats = train[['next_stop_id_pos', 'passenger_count']].groupby('next_stop_id_pos').agg({'passenger_count':['mean', 'std']})
+    return stop_stats
 
 
-
-def baseline_important_features(train, test):
+def baseline_important_features(train, test, dependent_variable, stop_stats):
+    # drop non_features from train / test sets
     non_features = ['timestamp', 'year', 'day', 'trip_id_comp_6_dig_id']
+    train = train.drop(columns=non_features)
+    test = test.drop(columns=non_features)
 
-    return train.drop(columns=non_features), test.drop(columns=non_features)
+    # partition train / test sets into features and targets
+    train_x = train.drop(columns=[dependent_variable])
+    train_y = train[dependent_variable]
+    test_x = test.drop(columns=[dependent_variable])
+    test_y = test[dependent_variable]
+
+    return train_x, train_y, test_x, test_y
+
+
+def baseline_important_features_with_stop_stats(train, test, dependent_variable, stop_stats):
+    # add columns for mean / std passenger_count per stop to train set
+    train['avg_stop_passengers'] = train['next_stop_id_pos'].apply(lambda x: stop_stats[('passenger_count', 'mean')].loc[x])
+    train['std_stop_passengers'] = train['next_stop_id_pos'].apply(lambda x: stop_stats[('passenger_count', 'std')].loc[x])
+    
+    # add columns for mean / std passenger_count per stop to test set
+    test['avg_stop_passengers'] = test['next_stop_id_pos'].apply(lambda x: stop_stats[('passenger_count', 'mean')].loc[x])
+    test['std_stop_passengers'] = test['next_stop_id_pos'].apply(lambda x: stop_stats[('passenger_count', 'std')].loc[x])
+
+    # drop non_features from train / test sets
+    non_features = ['timestamp', 'year', 'day', 'trip_id_comp_6_dig_id']
+    train = train.drop(columns=non_features)
+    test = test.drop(columns=non_features)
+
+    # partition train / test sets into features and targets
+    train_x = train.drop(columns=[dependent_variable])
+    train_y = train[dependent_variable]
+    test_x = test.drop(columns=[dependent_variable])
+    test_y = test[dependent_variable]
+
+    return train_x, train_y, test_x, test_y
