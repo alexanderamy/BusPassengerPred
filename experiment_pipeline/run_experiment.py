@@ -1,10 +1,7 @@
 import argparse
-import pandas as pd
-import datetime
 from evaluation import Evaluation
-from feature_sets import feature_set_with_trip_id, feature_set_without_trip_id
-from utils import date_train_test_split,custom_train_test_split
-import numpy as np
+from feature_sets import compute_stop_stats, baseline_important_features
+from utils import custom_train_test_split
 from sklearn.linear_model import LassoCV
 from data_loader import load_global_feature_set
 
@@ -12,7 +9,7 @@ def run_experiment(
     global_feature_set,
     feature_extractor_fn,
     model,  
-    stop_dict,
+    stop_id_ls,
     dependent_variable="passenger_count",
     split_heuristic="date",
     test_size=0.1,
@@ -23,9 +20,7 @@ def run_experiment(
 ):
     # Feature selection
     print("Selecting features...")
-    # split_date = datetime.date(year=2021, month=9, day=27)
-    # train, test = feature_extractor_fn(date_train_test_split(global_feature_set, split_date, 1))
-
+    
     train, test = custom_train_test_split(
         global_feature_set, 
         split_heuristic=split_heuristic, 
@@ -36,12 +31,12 @@ def run_experiment(
         random_state=random_state
     )
 
-    train, test = feature_extractor_fn(train, test)
+    # train_idx = train.index
+    # test_idx = test.index
 
-    train_x = train.drop(columns=[dependent_variable])
-    train_y = train[dependent_variable]
-    test_x = test.drop(columns=[dependent_variable])
-    test_y = test[dependent_variable]
+    stop_stats = compute_stop_stats(train, test)
+
+    train_x, train_y, test_x, test_y = feature_extractor_fn(train, test, dependent_variable, stop_stats)
 
     # Fit
     print("Fitting model...")
@@ -56,7 +51,9 @@ def run_experiment(
     test['passenger_count_pred'] = test_preds
 
     # Eval
-    return Evaluation(global_feature_set=global_feature_set, train=train, test=test, stop_dict=stop_dict)
+    return Evaluation(global_feature_set=global_feature_set, train=train, test=test, stop_id_ls=stop_id_ls, stop_stats=stop_stats)
+    # return Evaluation(global_feature_set=global_feature_set, train_idx=train_idx, test_idx=test_idx, stop_id_ls=stop_id_ls, stop_stats=stop_stats)
+
 
 
 parser = argparse.ArgumentParser()
@@ -69,24 +66,51 @@ parser.add_argument(
 
 parser.add_argument(
     'route', 
-    help='The route number, i.e. "B46"'
+    help='The route number, i.e. "B46"',
+    type=str
 )
 
+parser.add_argument(
+    'station', 
+    help='The weather station, i.e. "JFK"',
+    type=str
+)
+
+parser.add_argument(
+    'direction', 
+    help='The route direction, i.e. 0 or 1',
+    type=int
+)
 
 if __name__ == "__main__":
     args = parser.parse_args()
 
     data_dir = args.data_dir
     route_str = args.route
+    station_str = args.station
+    direction_int = args.direction
 
     ## Prepare globlal feature set
-    df_route, stop_dict = load_global_feature_set()
+    df_route, stop_id_ls = load_global_feature_set(
+        data_dir, 
+        route_str, 
+        station_str, 
+        direction_int
+    )
 
+    ## run experiment
     experiment_eval = run_experiment(
-        df_route,
-        feature_set_with_trip_id,
-        LassoCV(),
-        stop_dict
+        global_feature_set=df_route,
+        feature_extractor_fn=baseline_important_features,
+        model=LassoCV(),
+        stop_id_ls=stop_id_ls,
+        dependent_variable="passenger_count",
+        split_heuristic="date",
+        test_size=0.1,
+        split_date=(9, 27, 2021),
+        split_time=(0, 0),
+        num_test_periods=0,
+        random_state=0
     )
 
     print("Evaluation")

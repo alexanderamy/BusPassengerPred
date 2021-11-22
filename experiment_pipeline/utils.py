@@ -2,21 +2,6 @@ import datetime
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
-
-def date_train_test_split(segments_data, split_date, n_test_days):
-    """ 
-        Train: day 0 to split_date - 1
-        Test: split_date to split_date + n_test_days 
-    """
-    date_test_end = split_date + datetime.timedelta(days=n_test_days)
-    train = segments_data[segments_data['timestamp'].dt.date < split_date].copy()
-    test = segments_data[
-        (segments_data['timestamp'].dt.date >= split_date) &
-        (segments_data['timestamp'].dt.date <= date_test_end)
-    ].copy()
-
-    return train, test
-
 def custom_train_test_split(data, split_heuristic='arbitrary', test_size=0.1, split_date=(9, 27, 2021), split_time=(0, 0), num_test_periods=1, random_state=0):
     '''
     Train-test split data based on various heuristics
