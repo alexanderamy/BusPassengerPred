@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 import pandas as pd
 
-def date_train_test_split(segments_data, split_date, test_period):
+def date_train_test_split(segments_data, split_date: datetime, test_period):
     """ 
         Train: day 0 to split_date
         Test: split_date to split_date + test_period 
@@ -15,8 +15,8 @@ def date_train_test_split(segments_data, split_date, test_period):
         (segments_data['timestamp'] <= date_test_end)
     ].copy()
 
-    print(f"split train data until {split_date}: {train.shape[0]:,} rows")
-    print(f"      test data from {split_date} to {date_test_end}: {test.shape[0]:,} rows")
+    print(f"fitting on train data until {split_date}: {train.shape[0]:,} rows")
+    print(f"testing from {split_date} to {date_test_end}: {test.shape[0]:,} rows")
 
     return train, test
 
