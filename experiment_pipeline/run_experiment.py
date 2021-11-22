@@ -1,4 +1,5 @@
 import argparse
+from datetime import datetime
 from evaluation import Evaluation
 from feature_sets import compute_stop_stats, baseline_important_features
 from utils import custom_train_test_split
@@ -11,11 +12,11 @@ def run_experiment(
     model,  
     stop_id_ls,
     dependent_variable="passenger_count",
-    split_heuristic="date",
+    split_heuristic="datetime",
     test_size=0.1,
-    split_date=(9, 27, 2021),
-    split_time=(0, 0),
-    num_test_periods=1,
+    split_datetime=datetime(year=2021, month=9, day=27, hour=0, minute=0),
+    test_period="1D",
+    refit_interval=None,
     random_state=0
 ):
     # Feature selection
@@ -25,9 +26,8 @@ def run_experiment(
         global_feature_set, 
         split_heuristic=split_heuristic, 
         test_size=test_size, 
-        split_date=split_date, 
-        split_time=split_time, 
-        num_test_periods=num_test_periods, 
+        split_datetime=split_datetime,
+        test_period=test_period, 
         random_state=random_state
     )
 
@@ -77,8 +77,24 @@ parser.add_argument(
     type=int
 )
 
+
+parser.add_argument(
+    '-r',
+    '--refit_interval',
+    default=None,
+    help='Refit interval specified as a pandas timedelta'
+)
+
+parser.add_argument(
+    '-t',
+    '--test_period',
+    default='1D',
+    help='Time period for testing specified as a pandas timedelta'
+)
+
 if __name__ == "__main__":
     args = parser.parse_args()
+    print("Arguments", args)
 
     data_dir = args.data_dir
     route_str = args.route
@@ -100,13 +116,14 @@ if __name__ == "__main__":
         model=LassoCV(),
         stop_id_ls=stop_id_ls,
         dependent_variable="passenger_count",
-        split_heuristic="date",
-        test_size=0.1,
-        split_date=(9, 27, 2021),
-        split_time=(0, 0),
-        num_test_periods=0,
+        split_heuristic="datetime",
+        test_period=args.test_period,
+        refit_interval=args.refit_interval,
         random_state=0
     )
 
-    print("Evaluation")
+    print("-- Evaluation on train --")
     print(experiment_eval.basic_eval('train'))
+    print()
+    print("-- Evaluation on test --")
+    print(experiment_eval.basic_eval('test'))
