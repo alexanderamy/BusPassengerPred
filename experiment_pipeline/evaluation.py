@@ -5,17 +5,53 @@ from sklearn.metrics import (
     classification_report, 
     confusion_matrix, 
     mean_absolute_error, 
-    r2_score, max_error
+    r2_score, 
+    max_error,
+    balanced_accuracy_score
 )
-
-def is_crowded(stop_ids, passenger_counts, stop_stats, num_stds):
+  
+def is_crowded(stop_id_pos, passenger_counts, stop_stats, method='mean', num_classes=2, spread_multiple=1):
     crowded = []
-    for (stop_id, passenger_count) in zip(stop_ids, passenger_counts):
-      threshold = stop_stats[('passenger_count', 'mean')].loc[stop_id] + num_stds * stop_stats[('passenger_count', 'std')].loc[stop_id]
-      if passenger_count > threshold:
-        crowded.append(1)
-      else:
-        crowded.append(0)
+    for (stop_id, passenger_count) in zip(stop_id_pos, passenger_counts):
+      if num_classes == 2:
+        if method == 'mean':
+          threshold = stop_stats[('passenger_count', 'mean')].loc[stop_id]
+        elif method == 'q50':
+          threshold = stop_stats[('passenger_count', 'q50')].loc[stop_id]
+        elif method == 'q25q75':
+          threshold = stop_stats[('passenger_count', 'q75')].loc[stop_id]
+        elif method == 'std':
+          std = stop_stats[('passenger_count', 'std')].loc[stop_id]
+          threshold = stop_stats[('passenger_count', 'mean')].loc[stop_id] + spread_multiple * std
+        elif method == 'iqr':
+          iqr = stop_stats[('passenger_count', 'q75')].loc[stop_id] - stop_stats[('passenger_count', 'q25')].loc[stop_id]
+          threshold = stop_stats[('passenger_count', 'q75')].loc[stop_id] + spread_multiple * iqr
+        
+        if passenger_count > threshold:
+          crowded.append(1)
+        else:
+          crowded.append(0)
+      
+      elif num_classes == 3:
+        if method == 'q25q75':
+          upper_threshold = stop_stats[('passenger_count', 'q75')].loc[stop_id]
+          lower_threshold = stop_stats[('passenger_count', 'q25')].loc[stop_id]
+        elif method == 'std':
+          std = stop_stats[('passenger_count', 'std')].loc[stop_id]
+          upper_threshold = stop_stats[('passenger_count', 'mean')].loc[stop_id] + spread_multiple * std
+          lower_threshold = stop_stats[('passenger_count', 'mean')].loc[stop_id] - spread_multiple * std
+        elif method == 'iqr':
+          iqr = stop_stats[('passenger_count', 'q75')].loc[stop_id] - stop_stats[('passenger_count', 'q25')].loc[stop_id]
+          upper_threshold = stop_stats[('passenger_count', 'q75')].loc[stop_id] + spread_multiple * iqr
+          lower_threshold = stop_stats[('passenger_count', 'q25')].loc[stop_id] - spread_multiple * iqr
+        
+        if passenger_count > upper_threshold:
+          crowded.append(1)
+        elif passenger_count < lower_threshold:
+          crowded.append(-1)
+        else:
+          crowded.append(0)
+      
     return crowded
 
 class Evaluation:
@@ -205,31 +241,42 @@ class Evaluation:
     plt.show()
 
 
-  # def print_classification_metrics(self, data, dir=None, segment=None, num_stds=1):
-  #   if data == 'train':
-  #     df = self.train.copy()
-  #   elif data == 'val':
-  #     df = self.val.copy()
-  #   elif data == 'test':
-  #     df = self.test.copy()
+  def print_classification_metrics(self, data, segment=None, method='mean', num_classes=2, spread_multiple=1, pretty_print=True):
+    if data == 'train':
+      df = self.train.copy()
+    elif data == 'val':
+      df = self.val.copy()
+    elif data == 'test':
+      df = self.test.copy()
 
-  #   if dir:
-  #     df = df[df['direction'] == dir]
-
-  #   if segment:
-  #     if type(segment) == str:
-  #       next_stop_id = segment
-  #       assert next_stop_id in set(self.stop_dict[dir])
-  #       df = df[df['next_stop_id'] == next_stop_id]
-  #     elif type(segment) == int:
-  #       next_stop_id = self.stop_dict[dir][segment]
-  #       df = df[df['next_stop_id'] == next_stop_id]
+    if segment:
+      df = df[df['next_stop_id_pos'] == segment]
     
-  #   gt_crowded = is_crowded(df['next_stop_id'], df['passenger_count'], self.stop_stats, num_stds)
-  #   pred_crowded = is_crowded(df['next_stop_id'], df['passenger_count_pred'], self.stop_stats, num_stds)
+    gt_crowded = is_crowded(df['next_stop_id_pos'], df['passenger_count'], self.stop_stats, method, num_classes, spread_multiple)
+    pred_crowded = is_crowded(df['next_stop_id_pos'], df['passenger_count_pred'], self.stop_stats, method, num_classes, spread_multiple)
+    
+    bal_acc = balanced_accuracy_score(gt_crowded, pred_crowded)
+    cr_str = classification_report(gt_crowded, pred_crowded)
+    cr_dict = classification_report(gt_crowded, pred_crowded, output_dict=True)
+    cm = confusion_matrix(gt_crowded, pred_crowded)
 
-  #   print('Classification Report:')
-  #   print(classification_report(gt_crowded, pred_crowded))
-  #   print('\n')
-  #   print('Confusion Matrix (0 = not crowded | 1 = crowded):')
-  #   print(confusion_matrix(gt_crowded, pred_crowded))
+    if pretty_print:
+      if num_classes == 2:
+        print('Labels: 0 = not crowded | 1 = crowded')
+      if num_classes == 3:
+        print('Labels: -1 = sparse | 0 = normal | 1 = crowded')
+      print('\n')
+      print(f'Balanced Accuracy: {bal_acc}')
+      print('\n')
+      print('Classification Report:')
+      print(cr_str)
+      print('\n')
+      print('Confusion Matrix:')
+      print(cm)
+    
+      return bal_acc, cr_dict, cm
+
+    else:
+      return bal_acc, cr_dict, cm
+
+
