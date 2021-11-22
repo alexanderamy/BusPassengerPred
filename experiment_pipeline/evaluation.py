@@ -136,7 +136,7 @@ class Evaluation:
         gt_weekday = gt['weekday']
         pred_weekday = pred['weekday']
 
-        plt.figure(figsize=(20, 10))
+        fig = plt.figure(figsize=(20, 10))
         plt.plot(gt.index, gt_weekday, label='Ground Truth', color='darkorange')
         plt.plot(pred.index, pred_weekday, label='Prediction', color='navy')
         plt.xticks(hours)
@@ -150,7 +150,7 @@ class Evaluation:
         gt_weekend = gt['weekend']
         pred_weekend = pred['weekend']
 
-        plt.figure(figsize=(20, 10))
+        fig = plt.figure(figsize=(20, 10))
         plt.plot(gt.index, gt_weekend, label='Ground Truth', color='darkorange')
         plt.plot(pred.index, pred_weekend, label='Prediction', color='navy')
         plt.xticks(hours)
@@ -171,7 +171,7 @@ class Evaluation:
         gt_weekday_std = gt_std['weekday']
         pred_weekday_avg = pred_avg['weekday']
         pred_weekday_std = pred_std['weekday']
-        plt.figure(figsize=(20, 10))
+        fig = plt.figure(figsize=(20, 10))
         plt.plot(gt_avg.index, gt_weekday_avg, label='Ground Truth', color='darkorange')
         plt.fill_between(gt_avg.index, gt_weekday_avg - gt_weekday_std, gt_weekday_avg + gt_weekday_std, alpha=0.2, color='darkorange', lw=2)
         plt.plot(pred_avg.index, pred_weekday_avg, label='Prediction', color='navy')
@@ -188,7 +188,7 @@ class Evaluation:
         gt_weekend_std = gt_std['weekend']
         pred_weekend_avg = pred_avg['weekend']
         pred_weekend_std = pred_std['weekend']
-        plt.figure(figsize=(20, 10))
+        fig = plt.figure(figsize=(20, 10))
         plt.plot(gt_avg.index, gt_weekend_avg, label='Ground Truth', color='darkorange')
         plt.fill_between(gt_avg.index, gt_weekend_avg - gt_weekend_std, gt_weekend_avg + gt_weekend_std, alpha=0.2, color='darkorange', lw=2)
         plt.plot(pred_avg.index, pred_weekend_avg, label='Prediction', color='navy')
@@ -199,6 +199,7 @@ class Evaluation:
         plt.title('Weekend')
         plt.legend()
         plt.show()
+    return fig
 
   def gt_pred_scatter(self, data, eps=0.1, s=2, lower=None, upper=None):
     if data == 'train':

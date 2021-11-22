@@ -6,6 +6,9 @@ from utils import custom_train_test_split
 from sklearn.linear_model import LassoCV
 from data_loader import load_global_feature_set
 import pandas as pd
+import pickle
+
+SAVED_EXPERIMENT_DIR = "../saved_experiments/"
 
 def run_experiment(
     global_feature_set,
@@ -18,7 +21,8 @@ def run_experiment(
     split_datetime=datetime(year=2021, month=9, day=27, hour=0, minute=0),
     test_period="1D",
     refit_interval=None,
-    random_state=0
+    random_state=0,
+    experiment_name=None
 ):
     train, test = custom_train_test_split(
         global_feature_set, 
@@ -78,7 +82,20 @@ def run_experiment(
         test = pd.concat(refit_test_sets)
 
     # Eval
-    return Evaluation(global_feature_set=global_feature_set, train=train, test=test, stop_id_ls=stop_id_ls, stop_stats=stop_stats)
+    eval_instance = Evaluation(global_feature_set=global_feature_set, train=train, test=test, stop_id_ls=stop_id_ls, stop_stats=stop_stats)
+
+    if experiment_name is not None:
+        with open(f"{SAVED_EXPERIMENT_DIR}{experiment_name}.pickle", "wb") as f:
+            pickle.dump({
+                "split_datetime": split_datetime,
+                "test_period": test_period,
+                "split_heuristic": split_heuristic,
+                "model": model,
+                "eval": eval_instance
+            }, f)
+
+    return eval_instance
+    
 
 
 parser = argparse.ArgumentParser()
@@ -122,6 +139,12 @@ parser.add_argument(
     help='Time period for testing specified as a pandas timedelta'
 )
 
+parser.add_argument(
+    '-n',
+    '--experiment_name',
+    help='Experiment name to pickle the eval class in saved experiments'
+)
+
 if __name__ == "__main__":
     args = parser.parse_args()
     print("Arguments", args)
@@ -149,7 +172,8 @@ if __name__ == "__main__":
         split_heuristic="datetime",
         test_period=args.test_period,
         refit_interval=args.refit_interval,
-        random_state=0
+        random_state=0,
+        experiment_name=args.experiment_name
     )
 
     print("-- Evaluation on train --")
