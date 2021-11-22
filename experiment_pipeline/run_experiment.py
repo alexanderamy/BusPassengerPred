@@ -31,9 +31,6 @@ def run_experiment(
         random_state=random_state
     )
 
-    # train_idx = train.index
-    # test_idx = test.index
-
     stop_stats = compute_stop_stats(train, test)
 
     train_x, train_y, test_x, test_y = feature_extractor_fn(train, test, dependent_variable, stop_stats)
@@ -52,8 +49,6 @@ def run_experiment(
 
     # Eval
     return Evaluation(global_feature_set=global_feature_set, train=train, test=test, stop_id_ls=stop_id_ls, stop_stats=stop_stats)
-    # return Evaluation(global_feature_set=global_feature_set, train_idx=train_idx, test_idx=test_idx, stop_id_ls=stop_id_ls, stop_stats=stop_stats)
-
 
 
 parser = argparse.ArgumentParser()
