@@ -5,6 +5,7 @@ from feature_sets import compute_stop_stats, baseline_important_features
 from utils import custom_train_test_split
 from sklearn.linear_model import LassoCV
 from data_loader import load_global_feature_set
+import pandas as pd
 
 def run_experiment(
     global_feature_set,
@@ -19,9 +20,6 @@ def run_experiment(
     refit_interval=None,
     random_state=0
 ):
-    # Feature selection
-    print("Selecting features...")
-    
     train, test = custom_train_test_split(
         global_feature_set, 
         split_heuristic=split_heuristic, 
@@ -32,20 +30,52 @@ def run_experiment(
     )
 
     stop_stats = compute_stop_stats(train, test)
+    if refit_interval is None:
+        train_x, train_y, test_x, test_y = feature_extractor_fn(train, test, dependent_variable, stop_stats)
 
-    train_x, train_y, test_x, test_y = feature_extractor_fn(train, test, dependent_variable, stop_stats)
+        # Fit
+        print("Fitting model...")
+        model.fit(train_x, train_y)
 
-    # Fit
-    print("Fitting model...")
-    model.fit(train_x, train_y)
+        # Inference
+        print("Inference...")
+        train_preds = model.predict(train_x)
+        test_preds = model.predict(test_x)
 
-    # Inference
-    print("Inference...")
-    train_preds = model.predict(train_x)
-    test_preds = model.predict(test_x)
+        train['passenger_count_pred'] = train_preds
+        test['passenger_count_pred'] = test_preds
+    else:
+        print(f"Refitting every {refit_interval}")
+        initial_split = split_datetime
+        refit_test_sets = []
+        total_refits = pd.Timedelta(test_period) / pd.Timedelta(refit_interval)
+        counter = 0
+        while split_datetime < initial_split + pd.Timedelta(test_period):
+            print(f"Refitting {counter/int(total_refits):.0%}...")
+            train_refit, test_refit = custom_train_test_split(
+                global_feature_set, 
+                split_heuristic=split_heuristic, 
+                test_size=test_size, 
+                split_datetime=split_datetime,
+                test_period=refit_interval, 
+                random_state=random_state
+            )
+            train_x, train_y, test_x, test_y = feature_extractor_fn(train_refit, test_refit, dependent_variable, stop_stats)
+            refit_test_sets.append(test_refit)
+            model.fit(train_x, train_y)
 
-    train['passenger_count_pred'] = train_preds
-    test['passenger_count_pred'] = test_preds
+            # Run inference only once (when split datetime is the initial split)
+            if (split_datetime == initial_split):
+                train_preds = model.predict(train_x)
+                train['passenger_count_pred'] = train_preds
+
+            test_preds = model.predict(test_x)
+            test_refit['passenger_count_pred'] = test_preds
+
+            split_datetime += pd.Timedelta(refit_interval)
+            counter += 1
+
+        test = pd.concat(refit_test_sets)
 
     # Eval
     return Evaluation(global_feature_set=global_feature_set, train=train, test=test, stop_id_ls=stop_id_ls, stop_stats=stop_stats)

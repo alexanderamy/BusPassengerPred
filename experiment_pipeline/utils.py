@@ -35,8 +35,8 @@ def custom_train_test_split(
         # Convert to timezone of dataframe
         split_datetime = pd.Timestamp(split_datetime).tz_localize(data['timestamp'].dt.tz)
         date_test_end = (split_datetime + pd.Timedelta(test_period))
-        train = data[data['timestamp'].dt.date < split_datetime]
-        test = data[(data['timestamp'].dt.date >= split_datetime) & (data['timestamp'].dt.date <= date_test_end)]
+        train = data[data['timestamp'] < split_datetime]
+        test = data[(data['timestamp'] >= split_datetime) & (data['timestamp'] <= date_test_end)]
 
         print(f"split: fitting on train data until {split_datetime}: {train.shape[0]:,} rows")
         print(f"split: testing from {split_datetime} to {date_test_end}: {test.shape[0]:,} rows")
