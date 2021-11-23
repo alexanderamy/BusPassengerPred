@@ -56,6 +56,7 @@ def is_crowded(stop_id_pos, passenger_counts, stop_stats, method='mean', num_cla
 
 class Evaluation:
   def __init__(self, global_feature_set=None, train=None, val=None, test=None, stop_id_ls=None, stop_stats=None):
+    self.global_feature_set = global_feature_set
     self.train = train
     self.val = val
     self.test = test
