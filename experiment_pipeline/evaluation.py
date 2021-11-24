@@ -221,6 +221,14 @@ class Evaluation:
     df['pred_abs_error'] = df['pred_error'].abs()
     df['day_type'] = df['timestamp'].apply(lambda x: 'weekday' if x.dayofweek < 5 else 'weekend')
 
+    # weather
+    group_df = df.copy()[['timestamp', 'hour', 'Precipitation', 'Heat Index']]
+    group_df['Precipitation'] = group_df['Precipitation'].apply(lambda x: 1 if x > 0 else 0)
+    group_df['Heat Index'] = group_df['Heat Index'].apply(lambda x: 1 if x >= 90 else 0)
+    group_df = group_df.groupby(by=[group_df['timestamp'].dt.date, 'hour']).max()
+    precip_dts = [datetime.datetime(dt.year, dt.month, dt.day, hour, 0) for (dt, hour) in group_df[group_df['Precipitation'] == 1].index]
+    heat_dts = [datetime.datetime(dt.year, dt.month, dt.day, hour, 0) for (dt, hour) in group_df[group_df['Heat Index'] == 1].index]
+
     if errors == 'large':
       df = df.sort_values(by=['pred_abs_error'], ascending=False).iloc[0:n, :]
     
@@ -309,14 +317,6 @@ class Evaluation:
         if plot =='datetime':
           fig_weekday, ax = plt.subplots(figsize=(20, 10))
 
-          # weather
-          group_df = df.copy()[['timestamp', 'hour', 'Precipitation', 'Heat Index']]
-          group_df['Precipitation'] = group_df['Precipitation'].apply(lambda x: 1 if x > 0 else 0)
-          group_df['Heat Index'] = group_df['Heat Index'].apply(lambda x: 1 if x >= 90 else 0)
-          group_df = group_df.groupby(by=[group_df['timestamp'].dt.date, 'hour']).max()
-          precip_dts = [datetime.datetime(dt.year, dt.month, dt.day, hour, 0) for (dt, hour) in group_df[group_df['Precipitation'] == 1].index]
-          heat_dts = [datetime.datetime(dt.year, dt.month, dt.day, hour, 0) for (dt, hour) in group_df[group_df['Heat Index'] == 1].index]
-
           for i in range(len(precip_dts)):
             if i < len(precip_dts) - 1:
               ax.axvspan(precip_dts[i], (precip_dts[i] + datetime.timedelta(hours=1)), facecolor='blue', edgecolor='none', alpha=0.5)
@@ -347,6 +347,7 @@ class Evaluation:
           ax.scatter(under_est_timestamp_obs, under_est_gt, s=s, marker='o', color='darkorange')
           ax.scatter(under_est_timestamp_obs, under_est_gt, s=under_est_ss, marker='o', color='navy')
 
+          ax.set_xlim(xmin=df['timestamp'].min(), xmax=df['timestamp'].max())
           ax.set_xlabel('DateTime')
           ax.set_ylabel('Ground Truth Passenger Count')
           ax.set_title('Weekday')
@@ -434,14 +435,6 @@ class Evaluation:
         if plot =='datetime':
           fig_weekday, ax = plt.subplots(figsize=(20, 10))
 
-          # weather
-          group_df = df.copy()[['timestamp', 'hour', 'Precipitation', 'Heat Index']]
-          group_df['Precipitation'] = group_df['Precipitation'].apply(lambda x: 1 if x > 0 else 0)
-          group_df['Heat Index'] = group_df['Heat Index'].apply(lambda x: 1 if x >= 90 else 0)
-          group_df = group_df.groupby(by=[group_df['timestamp'].dt.date, 'hour']).max()
-          precip_dts = [datetime.datetime(dt.year, dt.month, dt.day, hour, 0) for (dt, hour) in group_df[group_df['Precipitation'] == 1].index]
-          heat_dts = [datetime.datetime(dt.year, dt.month, dt.day, hour, 0) for (dt, hour) in group_df[group_df['Heat Index'] == 1].index]
-
           for i in range(len(precip_dts)):
             if i < len(precip_dts) - 1:
               ax.axvspan(precip_dts[i], (precip_dts[i] + datetime.timedelta(hours=1)), facecolor='blue', edgecolor='none', alpha=0.5)
@@ -472,6 +465,7 @@ class Evaluation:
           ax.scatter(under_est_timestamp_obs, under_est_gt, s=s, marker='o', color='darkorange')
           ax.scatter(under_est_timestamp_obs, under_est_gt, s=under_est_ss, marker='o', color='navy')
 
+          ax.set_xlim(xmin=df['timestamp'].min(), xmax=df['timestamp'].max())
           ax.set_xlabel('DateTime')
           ax.set_ylabel('Ground Truth Passenger Count')
           ax.set_title('Weekend')
