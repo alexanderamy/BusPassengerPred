@@ -27,12 +27,10 @@ def is_crowded(stop_id_pos, passenger_counts, stop_stats, method='mean', num_cla
         elif method == 'iqr':
           iqr = stop_stats[('passenger_count', 'q75')].loc[stop_id] - stop_stats[('passenger_count', 'q25')].loc[stop_id]
           threshold = stop_stats[('passenger_count', 'q75')].loc[stop_id] + spread_multiple * iqr
-        
         if passenger_count > threshold:
           crowded.append(1)
         else:
           crowded.append(0)
-      
       elif num_classes == 3:
         if method == 'q25q75':
           upper_threshold = stop_stats[('passenger_count', 'q75')].loc[stop_id]
@@ -45,15 +43,14 @@ def is_crowded(stop_id_pos, passenger_counts, stop_stats, method='mean', num_cla
           iqr = stop_stats[('passenger_count', 'q75')].loc[stop_id] - stop_stats[('passenger_count', 'q25')].loc[stop_id]
           upper_threshold = stop_stats[('passenger_count', 'q75')].loc[stop_id] + spread_multiple * iqr
           lower_threshold = stop_stats[('passenger_count', 'q25')].loc[stop_id] - spread_multiple * iqr
-        
         if passenger_count > upper_threshold:
           crowded.append(1)
         elif passenger_count < lower_threshold:
           crowded.append(-1)
         else:
           crowded.append(0)
-      
     return crowded
+
 
 class Evaluation:
   def __init__(self, global_feature_set=None, train=None, val=None, test=None, stop_id_ls=None, stop_stats=None):
@@ -61,6 +58,15 @@ class Evaluation:
     self.train = train
     self.val = val
     self.test = test
+    if not isinstance(self.train, type(None)):
+      self.global_feature_set_train = self.global_feature_set.loc[self.train.index]
+      self.global_feature_set_train['passenger_count_pred'] = self.train['passenger_count_pred']
+    if not isinstance(self.val, type(None)):
+      self.global_feature_set_val = self.global_feature_set.loc[self.val.index]
+      self.global_feature_set_val['passenger_count_pred'] = self.val['passenger_count_pred']
+    if not isinstance(self.test, type(None)):
+      self.global_feature_set_test = self.global_feature_set.loc[self.test.index]
+      self.global_feature_set_test['passenger_count_pred'] = self.test['passenger_count_pred']
     self.stop_id_ls = stop_id_ls
     self.stop_pos_ls = [i for (i, _) in enumerate(self.stop_id_ls)]
     self.stop_id2stop_pos = {stop_id : stop_pos for (stop_id, stop_pos) in zip(self.stop_id_ls, self.stop_pos_ls)}
@@ -68,37 +74,30 @@ class Evaluation:
     self.stop_stats = stop_stats
     
   
-  def basic_eval(self, data, segment=None, pretty_print=True):
+  def regression_metrics(self, data, segment=None, pretty_print=True):
     if data == 'train':
-      df = self.train.copy()
-      df_train = self.train.copy()
+      df = self.global_feature_set_train.copy()
+      df_train = self.global_feature_set_train.copy()
     elif data == 'val':
-      df = self.val.copy()
-      df_train = self.train.copy()
-
+      df = self.global_feature_set_val.copy()
+      df_train = self.global_feature_set_train.copy()
     elif data == 'test':
-      df = self.test.copy()
-      df_train = self.train.copy()
-
+      df = self.global_feature_set_test.copy()
+      df_train = self.global_feature_set_train.copy()
     if segment:
       df = df[df['next_stop_id_pos'] == segment]
-
     gt = df['passenger_count']
     gt_train = df_train['passenger_count']
     gt_train_mean = np.zeros_like(gt) + gt_train.mean()
     pred = df['passenger_count_pred']
-
     mae_pred = mean_absolute_error(gt, pred)
     max_error_pred = max_error(gt, pred)
     r2_pred = r2_score(gt, pred)
-
     mae_mean = mean_absolute_error(gt, gt_train_mean)
     max_error_mean = max_error(gt, gt_train_mean)
     r2_mean = r2_score(gt, gt_train_mean)
-
     model_pred_eval = (mae_pred, max_error_pred, r2_pred)
     mean_pred_eval = (mae_mean, max_error_mean, r2_mean)
-
     if pretty_print:
       print('Performance: Model Prediction')
       print(f'MAE: {mae_pred:.1f}')
@@ -109,119 +108,113 @@ class Evaluation:
       print(f'MAE: {mae_mean:.1f}')
       print(f'ME : {max_error_mean:.1f}')
       print(f'R^2: {r2_mean:.2f}')
-
       return model_pred_eval, mean_pred_eval
-    
     else:
       return model_pred_eval, mean_pred_eval
     
     
-  def plot_passenger_count_by_time_of_day(self, data, segment=None, agg='sum'):
+  def classification_metrics(self, data, segment=None, method='mean', num_classes=2, spread_multiple=1, pretty_print=True):
     if data == 'train':
-      df = self.train.copy()
+      df = self.global_feature_set_train.copy()
     elif data == 'val':
-      df = self.val.copy()
+      df = self.global_feature_set_val.copy()
     elif data == 'test':
-      df = self.test.copy()
-
+      df = self.global_feature_set_test.copy()
     if segment:
       df = df[df['next_stop_id_pos'] == segment]
+    gt_crowded = is_crowded(df['next_stop_id_pos'], df['passenger_count'], self.stop_stats, method, num_classes, spread_multiple)
+    pred_crowded = is_crowded(df['next_stop_id_pos'], df['passenger_count_pred'], self.stop_stats, method, num_classes, spread_multiple)
+    bal_acc = balanced_accuracy_score(gt_crowded, pred_crowded)
+    cr_str = classification_report(gt_crowded, pred_crowded)
+    cr_dict = classification_report(gt_crowded, pred_crowded, output_dict=True)
+    cm = confusion_matrix(gt_crowded, pred_crowded)
+    if pretty_print:
+      if num_classes == 2:
+        print('Labels: 0 = not crowded | 1 = crowded')
+      if num_classes == 3:
+        print('Labels: -1 = sparse | 0 = normal | 1 = crowded')
+      print('\n')
+      print(f'Balanced Accuracy: {bal_acc}')
+      print('\n')
+      print('Classification Report:')
+      print(cr_str)
+      print('\n')
+      print('Confusion Matrix:')
+      print(cm)
+      return bal_acc, cr_dict, cm
+    else:
+      return bal_acc, cr_dict, cm
 
+  
+  def plot_passenger_count_by_time_of_day(self, data, segment=None, agg='sum'):
+    if data == 'train':
+      df = self.global_feature_set_train.copy()
+    elif data == 'val':
+      df = self.global_feature_set_val.copy()
+    elif data == 'test':
+      df = self.global_feature_set_test.copy()
+    if segment:
+      df = df[df['next_stop_id_pos'] == segment]
     hours = list(range(24))
-    df['day_type'] = df['timestamp'].apply(lambda x: 'weekday' if x.dayofweek < 5 else 'weekend')
-
-    fig_weekday = None
-    fig_weekend = None
-
+    df['day_type'] = df['timestamp'].apply(lambda x: 'Weekday' if x.dayofweek < 5 else 'Weekend')
+    day_types = ['Weekday', 'Weekend']
+    fig_dict = {'Weekday':None, 'Weekend':None, 'DateTime':None}
     if agg == 'sum':
       gt = df.groupby([df['timestamp'].dt.hour, 'day_type'])['passenger_count'].sum().unstack()
       pred = df.groupby([df['timestamp'].dt.hour, 'day_type'])['passenger_count_pred'].sum().unstack()
-
-      if ('weekday' in set(gt.columns)) and ('weekday' in set(pred.columns)):
-        gt_weekday = gt['weekday']
-        pred_weekday = pred['weekday']
-
-        fig_weekday = plt.figure(figsize=(20, 10))
-
-        plt.plot(gt.index, gt_weekday, label='Ground Truth', color='darkorange')
-        plt.plot(pred.index, pred_weekday, label='Prediction', color='navy')
-        plt.xticks(hours)
-        plt.xlabel('Time of Day')
-        plt.ylabel('Passenger Count')
-        plt.title('Weekday')
-        plt.legend()
-        plt.show()
-
-      if ('weekend' in set(gt.columns)) and ('weekend' in set(pred.columns)):  
-        gt_weekend = gt['weekend']
-        pred_weekend = pred['weekend']
-
-        fig_weekend = plt.figure(figsize=(20, 10))
-
-        plt.plot(gt.index, gt_weekend, label='Ground Truth', color='darkorange')
-        plt.plot(pred.index, pred_weekend, label='Prediction', color='navy')
-        plt.xticks(hours)
-        plt.xlabel('Time of Day')
-        plt.ylabel('Passenger Count')
-        plt.title('Weekend')
-        plt.legend()
-        plt.show()
-      
+      for day_type in day_types:
+        if (day_type in set(gt.columns)) and (day_type in set(pred.columns)):
+          gt_day_type = gt[day_type]
+          pred_day_type = pred[day_type]
+          fig, ax = plt.subplots(figsize=(20, 10))
+          ax.plot(gt.index, gt_day_type, label='Ground Truth', color='darkorange')
+          ax.plot(pred.index, pred_day_type, label='Prediction', color='navy')
+          ax.set_xticks(hours)
+          ax.set_xlabel('Time of Day')
+          ax.set_ylabel('Passenger Count')
+          ax.set_title(day_type)
+          plt.legend()
+          fig.tight_layout()
+          fig_dict[day_type] = fig
+          plt.show()
     elif agg == 'mean':
       gt_avg = df.groupby([df['timestamp'].dt.hour, 'day_type'])['passenger_count'].mean().unstack()
       gt_std = df.groupby([df['timestamp'].dt.hour, 'day_type'])['passenger_count'].std().unstack()
       pred_avg = df.groupby([df['timestamp'].dt.hour, 'day_type'])['passenger_count_pred'].mean().unstack()
       pred_std = df.groupby([df['timestamp'].dt.hour, 'day_type'])['passenger_count_pred'].std().unstack()
+      for day_type in day_types:
+        if ((day_type in set(gt_avg.columns)) and (day_type in set(gt_std.columns))) and ((day_type in set(pred_avg.columns)) and (day_type in set(pred_std.columns))):
+          gt_weekday_avg = gt_avg[day_type]
+          gt_weekday_std = gt_std[day_type]
+          pred_weekday_avg = pred_avg[day_type]
+          pred_weekday_std = pred_std[day_type]
+          fig, ax = plt.subplots(figsize=(20, 10))
+          ax.plot(gt_avg.index, gt_weekday_avg, label='Ground Truth', color='darkorange')
+          ax.fill_between(gt_avg.index, gt_weekday_avg - gt_weekday_std, gt_weekday_avg + gt_weekday_std, alpha=0.2, color='darkorange', lw=2)
+          ax.plot(pred_avg.index, pred_weekday_avg, label='Prediction', color='navy')
+          ax.fill_between(pred_avg.index, pred_weekday_avg - pred_weekday_std, pred_weekday_avg + pred_weekday_std, alpha=0.2, color='navy', lw=2)
+          ax.set_xticks(hours)
+          ax.set_xlabel('Time of Day')
+          ax.set_ylabel('Passenger Count')
+          ax.set_title(day_type)
+          plt.legend()
+          fig.tight_layout()
+          fig_dict[day_type] = fig
+          plt.show()
+    return fig_dict['Weekday'], fig_dict['Weekend'], fig_dict['DateTime']
 
-      if (('weekday' in set(gt_avg.columns)) and ('weekday' in set(gt_std.columns))) and (('weekday' in set(pred_avg.columns)) and ('weekday' in set(pred_std.columns))):
-        gt_weekday_avg = gt_avg['weekday']
-        gt_weekday_std = gt_std['weekday']
-        pred_weekday_avg = pred_avg['weekday']
-        pred_weekday_std = pred_std['weekday']
-        fig_weekday = plt.figure(figsize=(20, 10))
-        plt.plot(gt_avg.index, gt_weekday_avg, label='Ground Truth', color='darkorange')
-        plt.fill_between(gt_avg.index, gt_weekday_avg - gt_weekday_std, gt_weekday_avg + gt_weekday_std, alpha=0.2, color='darkorange', lw=2)
-        plt.plot(pred_avg.index, pred_weekday_avg, label='Prediction', color='navy')
-        plt.fill_between(pred_avg.index, pred_weekday_avg - pred_weekday_std, pred_weekday_avg + pred_weekday_std, alpha=0.2, color='navy', lw=2)
-        plt.xticks(hours)
-        plt.xlabel('Time of Day')
-        plt.ylabel('Passenger Count')
-        plt.title('Weekday')
-        plt.legend()
-        plt.show()
 
-      if (('weekend' in set(gt_avg.columns)) and ('weekend' in set(gt_std.columns))) and (('weekend' in set(pred_avg.columns)) and ('weekend' in set(pred_std.columns))):  
-        gt_weekend_avg = gt_avg['weekend']
-        gt_weekend_std = gt_std['weekend']
-        pred_weekend_avg = pred_avg['weekend']
-        pred_weekend_std = pred_std['weekend']
-        fig_weekend = plt.figure(figsize=(20, 10))
-        plt.plot(gt_avg.index, gt_weekend_avg, label='Ground Truth', color='darkorange')
-        plt.fill_between(gt_avg.index, gt_weekend_avg - gt_weekend_std, gt_weekend_avg + gt_weekend_std, alpha=0.2, color='darkorange', lw=2)
-        plt.plot(pred_avg.index, pred_weekend_avg, label='Prediction', color='navy')
-        plt.fill_between(pred_avg.index, pred_weekend_avg - pred_weekend_std, pred_weekend_avg + pred_weekend_std, alpha=0.2, color='navy', lw=2)
-        plt.xticks(hours)
-        plt.xlabel('Time of Day')
-        plt.ylabel('Passenger Count')
-        plt.title('Weekend')
-        plt.legend()
-        plt.show()
-    return fig_weekday, fig_weekend
-
-  def gt_pred_scatter(self, data, plot='basic', errors='all', n=100, s=50, gt_y=True):
-
+  def gt_pred_scatter(self, data, plot='simple', errors='all', n=100, s=50, gt_y=True):
     if data == 'train':
-      df = self.train.copy()
+      df = self.global_feature_set_train.copy()
     elif data == 'val':
-      df = self.val.copy()
+      df = self.global_feature_set_val.copy()
     elif data == 'test':
-      df = self.test.copy()
-
+      df = self.global_feature_set_test.copy()
     df['pred_error'] = df['passenger_count_pred'] - df['passenger_count']
     df['pred_abs_error'] = df['pred_error'].abs()
     df['day_type'] = df['timestamp'].apply(lambda x: 'Weekday' if x.dayofweek < 5 else 'Weekend')
     day_types = ['Weekday', 'Weekend']
-
     # weather
     group_df = df.copy()[['timestamp', 'hour', 'Precipitation', 'Heat Index']]
     group_df['Precipitation'] = group_df['Precipitation'].apply(lambda x: 1 if x > 0 else 0)
@@ -229,19 +222,12 @@ class Evaluation:
     group_df = group_df.groupby(by=[group_df['timestamp'].dt.date, 'hour']).max()
     precip_dts = [datetime.datetime(dt.year, dt.month, dt.day, hour, 0) for (dt, hour) in group_df[group_df['Precipitation'] == 1].index]
     heat_dts = [datetime.datetime(dt.year, dt.month, dt.day, hour, 0) for (dt, hour) in group_df[group_df['Heat Index'] == 1].index]
-
     if errors == 'large':
       df = df.sort_values(by=['pred_abs_error'], ascending=False).iloc[0:n, :]
-    
     elif errors == 'small':
       df = df.sort_values(by=['pred_abs_error'], ascending=True).iloc[0:n, :]
-
-    fig_weekday = None
-    fig_weekend = None
-    fig_datetime = None
-    figs_dict = {'Weekday':fig_weekday, 'Weekend':fig_weekend, 'DateTime':fig_datetime}
-
-    if plot == 'basic':
+    fig_dict = {'Weekday':None, 'Weekend':None, 'DateTime':None}
+    if plot == 'simple':
       for day_type in day_types:
         if day_type in set(df['day_type']):
           fig, ax = plt.subplots(figsize=(20, 20))
@@ -255,9 +241,8 @@ class Evaluation:
           ax.set_ylabel('Ground Truth Passenger Count')
           ax.set_title(day_type)
           fig.tight_layout()
-          figs_dict[day_type] = fig
+          fig_dict[day_type] = fig
           plt.show()
-    
     elif (plot == 'stop') or (plot == 'hour'):
       if plot == 'stop':
         col = 'next_stop_id_pos'
@@ -311,9 +296,8 @@ class Evaluation:
           for handle in legend.legendHandles:
             handle.set_sizes([s])
           fig.tight_layout()
-          figs_dict[day_type] = fig
+          fig_dict[day_type] = fig
           plt.show()
-      
     elif plot == 'datetime':
       fig, ax = plt.subplots(figsize=(20, 10))
       for i in range(len(precip_dts)):
@@ -366,49 +350,6 @@ class Evaluation:
         if handle.__class__.__name__ == 'PathCollection':
           handle.set_sizes([s])
       fig.tight_layout()
-      figs_dict['DateTime'] = fig
+      fig_dict['DateTime'] = fig
       plt.show()
-
-    return figs_dict['Weekday'], figs_dict['Weekend'], figs_dict['DateTime'] 
-
-
-  def print_classification_metrics(self, data, segment=None, method='mean', num_classes=2, spread_multiple=1, pretty_print=True):
-
-    if data == 'train':
-      df = self.train.copy()
-    elif data == 'val':
-      df = self.val.copy()
-    elif data == 'test':
-      df = self.test.copy()
-
-    if segment:
-      df = df[df['next_stop_id_pos'] == segment]
-    
-    gt_crowded = is_crowded(df['next_stop_id_pos'], df['passenger_count'], self.stop_stats, method, num_classes, spread_multiple)
-    pred_crowded = is_crowded(df['next_stop_id_pos'], df['passenger_count_pred'], self.stop_stats, method, num_classes, spread_multiple)
-    
-    bal_acc = balanced_accuracy_score(gt_crowded, pred_crowded)
-    cr_str = classification_report(gt_crowded, pred_crowded)
-    cr_dict = classification_report(gt_crowded, pred_crowded, output_dict=True)
-    cm = confusion_matrix(gt_crowded, pred_crowded)
-
-    if pretty_print:
-      if num_classes == 2:
-        print('Labels: 0 = not crowded | 1 = crowded')
-      if num_classes == 3:
-        print('Labels: -1 = sparse | 0 = normal | 1 = crowded')
-      print('\n')
-      print(f'Balanced Accuracy: {bal_acc}')
-      print('\n')
-      print('Classification Report:')
-      print(cr_str)
-      print('\n')
-      print('Confusion Matrix:')
-      print(cm)
-    
-      return bal_acc, cr_dict, cm
-
-    else:
-      return bal_acc, cr_dict, cm
-
-
+    return fig_dict['Weekday'], fig_dict['Weekend'], fig_dict['DateTime'] 
