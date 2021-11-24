@@ -1,12 +1,7 @@
 import streamlit as st
 import os
 from experiment_pipeline.data_loader import load_global_feature_set
-import pickle
-import sys
-
-# Hack for pickling evaluation class
-from experiment_pipeline import evaluation
-sys.modules['evaluation'] = evaluation
+from experiment_pipeline.run_experiment import load_pickled_experiment
 
 SAVED_EXPERIMENT_DIR = "saved_experiments/"
 
@@ -16,10 +11,9 @@ def st_report():
     st.header("Explore Experiments")
     experiments = os.listdir(SAVED_EXPERIMENT_DIR)
     selected_experiment = st.selectbox("Select experiment", options=experiments)
-    with open(SAVED_EXPERIMENT_DIR + selected_experiment, "rb") as f:
-        loaded_experiment = pickle.load(f)
+    experiment_eval, experiment_model = load_pickled_experiment(SAVED_EXPERIMENT_DIR + selected_experiment)
 
-    st.write(loaded_experiment["eval"].plot_passenger_count_by_time_of_day('test'))
+    st.write(experiment_eval.plot_passenger_count_by_time_of_day('test'))
 
     bus_routes = ["B46", "Bx12"]
     selected_bus_route = st.selectbox("Select a bus route", options=bus_routes)
