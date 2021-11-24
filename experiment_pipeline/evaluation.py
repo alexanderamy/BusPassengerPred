@@ -208,7 +208,7 @@ class Evaluation:
         plt.show()
     return fig_weekday, fig_weekend
 
-  def gt_pred_scatter(self, data, plot='basic', errors='all', n=100, s=50):
+  def gt_pred_scatter(self, data, plot='basic', errors='all', n=100, s=50, gt_y=True):
 
     if data == 'train':
       df = self.train.copy()
@@ -270,18 +270,34 @@ class Evaluation:
           over_est_df = df[(df['pred_error'] >= 0) & (df['day_type'] == day_type)]
           over_est_col_obs = over_est_df[col]
           over_est_gt = over_est_df['passenger_count']
+          over_est_pred = over_est_df['passenger_count_pred']
           over_est_errors = over_est_df['pred_abs_error']
-          over_est_ss = [s * max(1, error) for error in over_est_errors]
-          ax.scatter(over_est_col_obs, over_est_gt, s=over_est_ss, marker='o', label='Prediction', color='navy')
-          ax.scatter(over_est_col_obs, over_est_gt, s=s, marker='o', label='Ground Truth', color='darkorange')
+          if gt_y:
+            over_est_ss = [s * max(1, error) for error in over_est_errors]
+            ax.scatter(over_est_col_obs, over_est_gt, s=over_est_ss, marker='o', label='Prediction', color='navy')
+            ax.scatter(over_est_col_obs, over_est_gt, s=s, marker='o', label='Ground Truth', color='darkorange')
+            y_label = 'Ground Truth Passenger Count'
+          else:
+            over_est_ss = [s * min(1, 1 / error) for error in over_est_errors]
+            ax.scatter(over_est_col_obs, over_est_pred, s=s, marker='o', label='Prediction', color='navy')
+            ax.scatter(over_est_col_obs, over_est_pred, s=over_est_ss, marker='o', label='Ground Truth', color='darkorange')
+            y_label = 'Predicted Truth Passenger Count'
           # model predictions too low (plot pred markers on top of gt markers)
           under_est_df = df[(df['pred_error'] < 0) & (df['day_type'] == day_type)]
           under_est_col_obs = under_est_df[col]
           under_est_gt = under_est_df['passenger_count']
+          under_est_pred = under_est_df['passenger_count_pred']
           under_est_errors = under_est_df['pred_abs_error']
-          under_est_ss = [s * min(1, 1 / error) for error in under_est_errors]
-          ax.scatter(under_est_col_obs, under_est_gt, s=s, marker='o', color='darkorange')
-          ax.scatter(under_est_col_obs, under_est_gt, s=under_est_ss, marker='o', color='navy')
+          if gt_y:
+            under_est_ss = [s * min(1, 1 / error) for error in under_est_errors]
+            ax.scatter(under_est_col_obs, under_est_gt, s=s, marker='o', color='darkorange')
+            ax.scatter(under_est_col_obs, under_est_gt, s=under_est_ss, marker='o', color='navy')
+            y_label = 'Ground Truth Passenger Count'
+          else:
+            under_est_ss = [s * max(1, error) for error in under_est_errors]
+            ax.scatter(under_est_col_obs, under_est_pred, s=under_est_ss, marker='o', color='darkorange')
+            ax.scatter(under_est_col_obs, under_est_pred, s=s, marker='o', color='navy')
+            y_label = 'Predicted Passenger Count'
           if plot == 'stop':
             ax.set_xticks(self.stop_pos_ls)
             ax.set_xticklabels(self.stop_id_ls, rotation=90)
@@ -289,7 +305,7 @@ class Evaluation:
             hours = list(range(24))
             ax.set_xticks(hours)
           ax.set_xlabel(plot.capitalize())
-          ax.set_ylabel('Ground Truth Passenger Count')
+          ax.set_ylabel(y_label)
           ax.set_title(day_type)
           legend = plt.legend()
           for handle in legend.legendHandles:
@@ -314,21 +330,37 @@ class Evaluation:
       over_est_df = df[(df['pred_error'] >= 0)]
       over_est_timestamp_obs = over_est_df['timestamp']
       over_est_gt = over_est_df['passenger_count']
+      over_est_pred = over_est_df['passenger_count_pred']
       over_est_errors = over_est_df['pred_abs_error']
-      over_est_ss = [s * max(1, error) for error in over_est_errors]
-      ax.scatter(over_est_timestamp_obs, over_est_gt, s=over_est_ss, marker='o', label='Prediction', color='navy')
-      ax.scatter(over_est_timestamp_obs, over_est_gt, s=s, marker='o', label='Ground Truth', color='darkorange')
+      if gt_y:
+        over_est_ss = [s * max(1, error) for error in over_est_errors]
+        ax.scatter(over_est_timestamp_obs, over_est_gt, s=over_est_ss, marker='o', label='Prediction', color='navy')
+        ax.scatter(over_est_timestamp_obs, over_est_gt, s=s, marker='o', label='Ground Truth', color='darkorange')
+        y_label = 'Ground Truth Passenger Count'
+      else:
+        over_est_ss = [s * min(1, 1 / error) for error in over_est_errors]
+        ax.scatter(over_est_timestamp_obs, over_est_pred, s=s, marker='o', label='Prediction', color='navy')
+        ax.scatter(over_est_timestamp_obs, over_est_pred, s=over_est_ss, marker='o', label='Ground Truth', color='darkorange')
+        y_label = 'Predicted Passenger Count'
       # model predictions too low (plot pred markers on top of gt markers)
       under_est_df = df[(df['pred_error'] < 0)]
       under_est_timestamp_obs = under_est_df['timestamp']
       under_est_gt = under_est_df['passenger_count']
+      under_est_pred = under_est_df['passenger_count_pred']
       under_est_errors = under_est_df['pred_abs_error']
-      under_est_ss = [s * min(1, 1 / error) for error in under_est_errors]
-      ax.scatter(under_est_timestamp_obs, under_est_gt, s=s, marker='o', color='darkorange')
-      ax.scatter(under_est_timestamp_obs, under_est_gt, s=under_est_ss, marker='o', color='navy')
+      if gt_y:
+        under_est_ss = [s * min(1, 1 / error) for error in under_est_errors]
+        ax.scatter(under_est_timestamp_obs, under_est_gt, s=s, marker='o', color='darkorange')
+        ax.scatter(under_est_timestamp_obs, under_est_gt, s=under_est_ss, marker='o', color='navy')
+        y_label = 'Ground Truth Passenger Count'
+      else:
+        under_est_ss = [s * max(1, error) for error in under_est_errors]
+        ax.scatter(under_est_timestamp_obs, under_est_pred, s=under_est_ss, marker='o', color='darkorange')
+        ax.scatter(under_est_timestamp_obs, under_est_pred, s=s, marker='o', color='navy')
+        y_label = 'Predicted Passenger Count'
       ax.set_xlim(xmin=df['timestamp'].min().replace(microsecond=0, second=0, minute=0) - datetime.timedelta(hours=12), xmax=df['timestamp'].max().replace(microsecond=0, second=0, minute=0) + datetime.timedelta(hours=12))
       ax.set_xlabel('DateTime')
-      ax.set_ylabel('Ground Truth Passenger Count')
+      ax.set_ylabel(y_label)
       legend = ax.legend()
       for handle in legend.legendHandles:
         if handle.__class__.__name__ == 'PathCollection':
