@@ -1,10 +1,10 @@
 import argparse
 from datetime import datetime
-from evaluation import Evaluation
-from feature_sets import compute_stop_stats, baseline_important_features
-from utils import custom_train_test_split
+from .evaluation import Evaluation
+from .feature_sets import compute_stop_stats, baseline_important_features
+from .utils import custom_train_test_split
 from sklearn.linear_model import LassoCV
-from data_loader import load_global_feature_set
+from .data_loader import load_global_feature_set
 import pandas as pd
 import pickle
 
@@ -18,7 +18,7 @@ def run_experiment(
     dependent_variable="passenger_count",
     split_heuristic="datetime",
     test_size=0.1,
-    split_datetime=datetime(year=2021, month=9, day=27, hour=0, minute=0),
+    split_datetime=datetime(year=2021, month=9, day=15, hour=0, minute=0),
     test_period="1D",
     refit_interval=None,
     random_state=0,
@@ -91,12 +91,35 @@ def run_experiment(
                 "test_period": test_period,
                 "split_heuristic": split_heuristic,
                 "model": model,
-                "eval": eval_instance
+                "global_feature_set": global_feature_set,
+                "train": train,
+                "test": test,
+                "stop_id_ls": stop_id_ls,
+                "stop_stats": stop_stats
             }, f)
 
     return eval_instance
     
+def load_pickled_experiment(location):
+    """ 
+        Loads a pickled experiment from a location 
+        and instantiates the evaluation class
+    """
 
+    with open(location, "rb") as f:
+        loaded_experiment = pickle.load(f)
+
+    return (
+        Evaluation(
+            global_feature_set=loaded_experiment["global_feature_set"], 
+            train=loaded_experiment["train"], 
+            test=loaded_experiment["test"], 
+            stop_id_ls=loaded_experiment["stop_id_ls"], 
+            stop_stats=loaded_experiment["stop_stats"]
+        ),
+        loaded_experiment["model"]
+    )
+        
 
 parser = argparse.ArgumentParser()
 

@@ -6,7 +6,7 @@ def custom_train_test_split(
     data, 
     split_heuristic='datetime', 
     test_size=0.1, 
-    split_datetime=datetime.datetime(year=2021, month=9, day=27, hour=0, minute=0), 
+    split_datetime=datetime.datetime(year=2021, month=9, day=15, hour=0, minute=0), 
     test_period='1D', 
     random_state=0
 ):
