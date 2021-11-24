@@ -18,7 +18,7 @@ def run_experiment(
     dependent_variable="passenger_count",
     split_heuristic="datetime",
     test_size=0.1,
-    split_datetime=datetime(year=2021, month=9, day=27, hour=0, minute=0),
+    split_datetime=datetime(year=2021, month=9, day=15, hour=0, minute=0),
     test_period="1D",
     refit_interval=None,
     random_state=0,
