@@ -203,7 +203,7 @@ class Evaluation:
     return fig
 
 
-  def gt_pred_scatter(self, data, eps=0.1, s=2, lower=None, upper=None):
+  def gt_pred_scatter(self, data, plot='basic', errors='all', n=100, s=50):
     if data == 'train':
       df = self.train.copy()
     elif data == 'val':
@@ -211,72 +211,208 @@ class Evaluation:
     elif data == 'test':
       df = self.test.copy()
 
-    df['pred_to_gt_ratio'] = (df['passenger_count_pred'] + eps) / (df['passenger_count'] + eps)
+    df['pred_error'] = df['passenger_count_pred'] - df['passenger_count']
+    df['pred_abs_error'] = df['pred_error'].abs()
     df['day_type'] = df['timestamp'].apply(lambda x: 'weekday' if x.dayofweek < 5 else 'weekend')
+
+    if errors == 'large':
+      df = df.sort_values(by=['pred_abs_error'], ascending=False).iloc[0:n, :]
+    
+    elif errors == 'small':
+      df = df.sort_values(by=['pred_abs_error'], ascending=True).iloc[0:n, :]
 
     # weekday
     if 'weekday' in set(df['day_type']):
-      # model predictions too high (plot gt markers on top of pred markers)
-      fig = plt.figure(figsize=(20, 10))
-      over_est_df = df[(df['pred_to_gt_ratio'] >= 1) & (df['day_type'] == 'weekday')]
-      over_est_stop_pos_obs = over_est_df['next_stop_id_pos']
-      over_est_gt = over_est_df['passenger_count']
-      over_est_ratios = over_est_df['pred_to_gt_ratio']
-      over_est_ratios = over_est_ratios.clip(lower=lower, upper=upper)
-      over_est_ss = [s * ratio ** 2 for ratio in over_est_ratios]
-      plt.scatter(over_est_stop_pos_obs, over_est_gt, s=over_est_ss, marker='o', label='Prediction', color='navy')
-      plt.scatter(over_est_stop_pos_obs, over_est_gt, s=s, marker='o', label='Ground Truth', color='darkorange')
+        if plot == 'basic':
+          fig = plt.figure(figsize=(20, 20))
+          gt = df[df['day_type'] == 'weekday']['passenger_count']
+          pred = df[df['day_type'] == 'weekday']['passenger_count_pred']
+          plt.scatter(pred, gt, s=s, marker='o', color='navy', alpha=0.25)
+          plt.xlim([min(gt.min(), pred.min()), max(gt.max(), pred.max())])
+          plt.ylim([min(gt.min(), pred.min()), max(gt.max(), pred.max())])
+          plt.plot(plt.xlim(), plt.xlim(), color='darkorange', scalex=False, scaley=False)
+          plt.xlabel('Predicted Passenger Count')
+          plt.ylabel('Ground Truth Passenger Count')
+          plt.title('Weekday')
 
-      # model predictions too low (plot pred markers on top of gt markers)
-      under_est_df = df[(df['pred_to_gt_ratio'] < 1) & (df['day_type'] == 'weekday')]
-      under_est_stop_pos_obs = under_est_df['next_stop_id_pos']
-      under_est_gt = under_est_df['passenger_count']
-      under_est_ratios = under_est_df['pred_to_gt_ratio']
-      under_est_ratios = under_est_ratios.clip(lower=lower, upper=upper)
-      under_est_ss = [s * ratio ** 2 for ratio in under_est_ratios]
-      plt.scatter(under_est_stop_pos_obs, under_est_gt, s=s, marker='o', color='darkorange')
-      plt.scatter(under_est_stop_pos_obs, under_est_gt, s=under_est_ss, marker='o', color='navy')
+        if plot == 'stop':
+          fig = plt.figure(figsize=(20, 10))
+          # model predictions too high (plot gt markers on top of pred markers)
+          over_est_df = df[(df['pred_error'] >= 0) & (df['day_type'] == 'weekday')]
+          over_est_stop_pos_obs = over_est_df['next_stop_id_pos']
+          over_est_gt = over_est_df['passenger_count']
+          over_est_errors = over_est_df['pred_abs_error']
+          over_est_ss = [s * max(1, error) for error in over_est_errors]
+          plt.scatter(over_est_stop_pos_obs, over_est_gt, s=over_est_ss, marker='o', label='Prediction', color='navy')
+          plt.scatter(over_est_stop_pos_obs, over_est_gt, s=s, marker='o', label='Ground Truth', color='darkorange')
 
-      plt.xticks(self.stop_pos_ls, self.stop_id_ls, rotation=90)
-      plt.xlabel('Stop')
-      plt.ylabel('Ground Truth Passenger Count')
-      plt.title('Weekday')
-      legend = plt.legend()
-      for handle in legend.legendHandles:
-        handle.set_sizes([s])
-      plt.show()
+          # model predictions too low (plot pred markers on top of gt markers)
+          under_est_df = df[(df['pred_error'] < 0) & (df['day_type'] == 'weekday')]
+          under_est_stop_pos_obs = under_est_df['next_stop_id_pos']
+          under_est_gt = under_est_df['passenger_count']
+          under_est_errors = under_est_df['pred_abs_error']
+          under_est_ss = [s * min(1, 1 / error) for error in under_est_errors]
+          plt.scatter(under_est_stop_pos_obs, under_est_gt, s=s, marker='o', color='darkorange')
+          plt.scatter(under_est_stop_pos_obs, under_est_gt, s=under_est_ss, marker='o', color='navy')
+
+          plt.xticks(self.stop_pos_ls, self.stop_id_ls, rotation=90)
+          plt.xlabel('Stop')
+          plt.ylabel('Ground Truth Passenger Count')
+          plt.title('Weekday')
+          legend = plt.legend()
+          for handle in legend.legendHandles:
+            handle.set_sizes([s])
+          plt.show()
+
+        if plot == 'hour':
+          fig = plt.figure(figsize=(20, 10))
+          # model predictions too high (plot gt markers on top of pred markers)
+          over_est_df = df[(df['pred_error'] >= 0) & (df['day_type'] == 'weekday')]
+          over_est_hour_obs = over_est_df['hour']
+          over_est_gt = over_est_df['passenger_count']
+          over_est_errors = over_est_df['pred_abs_error']
+          over_est_ss = [s * max(1, error) for error in over_est_errors]
+          plt.scatter(over_est_hour_obs, over_est_gt, s=over_est_ss, marker='o', label='Prediction', color='navy')
+          plt.scatter(over_est_hour_obs, over_est_gt, s=s, marker='o', label='Ground Truth', color='darkorange')
+
+          # model predictions too low (plot pred markers on top of gt markers)
+          under_est_df = df[(df['pred_error'] < 0) & (df['day_type'] == 'weekday')]
+          under_est_hour_obs = under_est_df['hour']
+          under_est_gt = under_est_df['passenger_count']
+          under_est_errors = under_est_df['pred_abs_error']
+          under_est_ss = [s * min(1, 1 / error) for error in under_est_errors]
+          plt.scatter(under_est_hour_obs, under_est_gt, s=s, marker='o', color='darkorange')
+          plt.scatter(under_est_hour_obs, under_est_gt, s=under_est_ss, marker='o', color='navy')
+
+          hours = list(range(24))
+          plt.xticks(hours)
+          plt.xlabel('Time of Day')
+          plt.ylabel('Ground Truth Passenger Count')
+          plt.title('Weekday')
+          legend = plt.legend()
+          for handle in legend.legendHandles:
+            handle.set_sizes([s])
+          plt.show()
+
+        if plot =='datetime':
+
+          def find_hot_indices(datetime_array):
+            indices = []
+            for i in range(len(datetime_array)):
+                if datetime_array[i].weekday() >= 5:
+                    indices.append(i)
+            return indices
+
+          def find_rain_indices(datetime_array):
+              indices = []
+              for i in range(len(datetime_array)):
+                  if datetime_array[i].weekday() < 5:
+                      if datetime_array[i].hour >= 7 and datetime_array[i].hour <= 19:
+                          indices.append(i)
+              return indices
+
+          fig = plt.figure(figsize=(20, 10))
+          # model predictions too high (plot gt markers on top of pred markers)
+          over_est_df = df[(df['pred_error'] >= 0) & (df['day_type'] == 'weekday')]
+          over_est_timestamp_obs = over_est_df['timestamp']
+          over_est_gt = over_est_df['passenger_count']
+          over_est_errors = over_est_df['pred_abs_error']
+          over_est_ss = [s * max(1, error) for error in over_est_errors]
+          plt.scatter(over_est_timestamp_obs, over_est_gt, s=over_est_ss, marker='o', label='Prediction', color='navy')
+          plt.scatter(over_est_timestamp_obs, over_est_gt, s=s, marker='o', label='Ground Truth', color='darkorange')
+
+          # model predictions too low (plot pred markers on top of gt markers)
+          under_est_df = df[(df['pred_error'] < 0) & (df['day_type'] == 'weekday')]
+          under_est_timestamp_obs = under_est_df['timestamp']
+          under_est_gt = under_est_df['passenger_count']
+          under_est_errors = under_est_df['pred_abs_error']
+          under_est_ss = [s * min(1, 1 / error) for error in under_est_errors]
+          plt.scatter(under_est_timestamp_obs, under_est_gt, s=s, marker='o', color='darkorange')
+          plt.scatter(under_est_timestamp_obs, under_est_gt, s=under_est_ss, marker='o', color='navy')
+
+          start_date = df['timestamp'].dt.min()
+          end_date = df['timestamp'].dt.max()
+          plt.xticks(hours)
+          plt.xlabel('Date')
+          plt.ylabel('Ground Truth Passenger Count')
+          plt.title('Weekday')
+          legend = plt.legend()
+          for handle in legend.legendHandles:
+            handle.set_sizes([s])
+          plt.show()
 
     # weekend
     if 'weekend' in set(df['day_type']):
-      # model predictions too high (plot gt markers on top of pred markers)
-      fig = plt.figure(figsize=(20, 10))
-      over_est_df = df[(df['pred_to_gt_ratio'] >= 1) & (df['day_type'] == 'weekend')]
-      over_est_stop_pos_obs = over_est_df['next_stop_id_pos']
-      over_est_gt = over_est_df['passenger_count']
-      over_est_ratios = over_est_df['pred_to_gt_ratio']
-      over_est_ratios = over_est_ratios.clip(lower=lower, upper=upper)
-      over_est_ss = [s * ratio ** 2 for ratio in over_est_ratios]
-      plt.scatter(over_est_stop_pos_obs, over_est_gt, s=over_est_ss, marker='o', label='Prediction', color='navy')
-      plt.scatter(over_est_stop_pos_obs, over_est_gt, s=s, marker='o', label='Ground Truth', color='darkorange')
+        fig = plt.figure(figsize=(20, 10))
+        if plot == 'basic':
+          fig = plt.figure(figsize=(20, 20))
+          gt = df[df['day_type'] == 'weekend']['passenger_count']
+          pred = df[df['day_type'] == 'weekend']['passenger_count_pred']
+          plt.scatter(pred, gt, s=s, marker='o', color='navy', alpha=0.25)
+          plt.xlim([min(gt.min(), pred.min()), max(gt.max(), pred.max())])
+          plt.ylim([min(gt.min(), pred.min()), max(gt.max(), pred.max())])
+          plt.plot(plt.xlim(), plt.xlim(), color='darkorange', scalex=False, scaley=False)
+          plt.xlabel('Predicted Passenger Count')
+          plt.ylabel('Ground Truth Passenger Count')
+          plt.title('Weekend')
 
-      # model predictions too low (plot pred markers on top of gt markers)
-      under_est_df = df[(df['pred_to_gt_ratio'] < 1) & (df['day_type'] == 'weekend')]
-      under_est_stop_pos_obs = under_est_df['next_stop_id_pos']
-      under_est_gt = under_est_df['passenger_count']
-      under_est_ratios = under_est_df['pred_to_gt_ratio']
-      under_est_ratios = under_est_ratios.clip(lower=lower, upper=upper)
-      under_est_ss = [s * ratio ** 2 for ratio in under_est_ratios]
-      plt.scatter(under_est_stop_pos_obs, under_est_gt, s=s, marker='o', color='darkorange')
-      plt.scatter(under_est_stop_pos_obs, under_est_gt, s=under_est_ss, marker='o', color='navy')
+        if plot == 'stop':
+          # model predictions too high (plot gt markers on top of pred markers)
+          over_est_df = df[(df['pred_error'] >= 0) & (df['day_type'] == 'weekend')]
+          over_est_stop_pos_obs = over_est_df['next_stop_id_pos']
+          over_est_gt = over_est_df['passenger_count']
+          over_est_errors = over_est_df['pred_abs_error']
+          over_est_ss = [s * max(1, error) for error in over_est_errors]
+          plt.scatter(over_est_stop_pos_obs, over_est_gt, s=over_est_ss, marker='o', label='Prediction', color='navy')
+          plt.scatter(over_est_stop_pos_obs, over_est_gt, s=s, marker='o', label='Ground Truth', color='darkorange')
 
-      plt.xticks(self.stop_pos_ls, self.stop_id_ls, rotation=90)
-      plt.xlabel('Stop')
-      plt.ylabel('Ground Truth Passenger Count')
-      plt.title('Weekend')
-      legend = plt.legend()
-      for handle in legend.legendHandles:
-        handle.set_sizes([s])
-      plt.show()  
+          # model predictions too low (plot pred markers on top of gt markers)
+          under_est_df = df[(df['pred_error'] < 0) & (df['day_type'] == 'weekend')]
+          under_est_stop_pos_obs = under_est_df['next_stop_id_pos']
+          under_est_gt = under_est_df['passenger_count']
+          under_est_errors = under_est_df['pred_abs_error']
+          under_est_ss = [s * min(1, 1 / error) for error in under_est_errors]
+          plt.scatter(under_est_stop_pos_obs, under_est_gt, s=s, marker='o', color='darkorange')
+          plt.scatter(under_est_stop_pos_obs, under_est_gt, s=under_est_ss, marker='o', color='navy')
+
+          plt.xticks(self.stop_pos_ls, self.stop_id_ls, rotation=90)
+          plt.xlabel('Stop')
+          plt.ylabel('Ground Truth Passenger Count')
+          plt.title('Weekend')
+          legend = plt.legend()
+          for handle in legend.legendHandles:
+            handle.set_sizes([s])
+          plt.show() 
+
+        if plot == 'hour':
+          fig = plt.figure(figsize=(20, 10))
+          # model predictions too high (plot gt markers on top of pred markers)
+          over_est_df = df[(df['pred_error'] >= 0) & (df['day_type'] == 'weekend')]
+          over_est_hour_obs = over_est_df['hour']
+          over_est_gt = over_est_df['passenger_count']
+          over_est_errors = over_est_df['pred_abs_error']
+          over_est_ss = [s * max(1, error) for error in over_est_errors]
+          plt.scatter(over_est_hour_obs, over_est_gt, s=over_est_ss, marker='o', label='Prediction', color='navy')
+          plt.scatter(over_est_hour_obs, over_est_gt, s=s, marker='o', label='Ground Truth', color='darkorange')
+
+          # model predictions too low (plot pred markers on top of gt markers)
+          under_est_df = df[(df['pred_error'] < 0) & (df['day_type'] == 'weekday')]
+          under_est_hour_obs = under_est_df['hour']
+          under_est_gt = under_est_df['passenger_count']
+          under_est_errors = under_est_df['pred_abs_error']
+          under_est_ss = [s * min(1, 1 / error) for error in under_est_errors]
+          plt.scatter(under_est_hour_obs, under_est_gt, s=s, marker='o', color='darkorange')
+          plt.scatter(under_est_hour_obs, under_est_gt, s=under_est_ss, marker='o', color='navy')
+
+          hours = list(range(24))
+          plt.xticks(hours)
+          plt.xlabel('Time of Day')
+          plt.ylabel('Ground Truth Passenger Count')
+          plt.title('Weekday')
+          legend = plt.legend()
+          for handle in legend.legendHandles:
+            handle.set_sizes([s])
+          plt.show() 
     return fig
 
 
