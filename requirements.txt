@@ -1,2 +1,6 @@
 streamlit
 watchdog
+sklearn
+matplotlib
+pandas
+xgboost

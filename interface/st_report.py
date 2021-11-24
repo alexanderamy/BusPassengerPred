@@ -1,7 +1,7 @@
 import streamlit as st
 import os
 from experiment_pipeline.data_loader import load_global_feature_set
-from experiment_pipeline.run_experiment import load_pickled_experiment
+from run_experiment import load_pickled_experiment
 
 SAVED_EXPERIMENT_DIR = "saved_experiments/"
 
