@@ -7,8 +7,7 @@ from sklearn.linear_model import LassoCV
 from experiment_pipeline.data_loader import load_global_feature_set
 import pandas as pd
 import pickle
-
-SAVED_EXPERIMENT_DIR = "./saved_experiments/"
+import os
 
 def run_experiment(
     global_feature_set,
@@ -22,7 +21,8 @@ def run_experiment(
     test_period="1D",
     refit_interval=None,
     random_state=0,
-    experiment_name=None
+    experiment_name=None,
+    experiment_dir="./saved_experiments/"
 ):
     train, test = custom_train_test_split(
         global_feature_set, 
@@ -83,7 +83,7 @@ def run_experiment(
     eval_instance = Evaluation(global_feature_set=global_feature_set, train=train, test=test, stop_id_ls=stop_id_ls, stop_stats=stop_stats)
 
     if experiment_name is not None:
-        with open(f"{SAVED_EXPERIMENT_DIR}{experiment_name}.pickle", "wb") as f:
+        with open(os.path.join(experiment_dir, f"{experiment_name}.pickle"), "wb") as f:
             pickle.dump({
                 "split_datetime": split_datetime,
                 "test_period": test_period,
@@ -198,7 +198,7 @@ if __name__ == "__main__":
     )
 
     print("-- Evaluation on train --")
-    print(experiment_eval.basic_eval('train'))
+    print(experiment_eval.regression_metrics('train'))
     print()
     print("-- Evaluation on test --")
-    print(experiment_eval.basic_eval('test'))
+    print(experiment_eval.regression_metrics('test'))
