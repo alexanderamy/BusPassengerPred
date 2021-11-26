@@ -34,13 +34,11 @@ def run_experiment(
     )
 
     stop_stats = compute_stop_stats(train, test)
+    train_x, train_y, test_x, test_y = feature_extractor_fn(train, test, dependent_variable, stop_stats)
+    # Fit
+    print("Fitting model...")
+    model.fit(train_x, train_y)
     if refit_interval is None:
-        train_x, train_y, test_x, test_y = feature_extractor_fn(train, test, dependent_variable, stop_stats)
-
-        # Fit
-        print("Fitting model...")
-        model.fit(train_x, train_y)
-
         # Inference
         print("Inference...")
         train_preds = model.predict(train_x)
@@ -49,6 +47,9 @@ def run_experiment(
         train['passenger_count_pred'] = train_preds
         test['passenger_count_pred'] = test_preds
     else:
+        # Run inference once on initial train set    
+        train_preds = model.predict(train_x)
+        train['passenger_count_pred'] = train_preds
         print(f"Refitting every {refit_interval}")
         initial_split = split_datetime
         refit_test_sets = []
@@ -64,17 +65,14 @@ def run_experiment(
                 test_period=refit_interval, 
                 random_state=random_state
             )
-            train_x, train_y, test_x, test_y = feature_extractor_fn(train_refit, test_refit, dependent_variable, stop_stats)
-            refit_test_sets.append(test_refit)
-            model.fit(train_x, train_y)
-
-            # Run inference only once (when split datetime is the initial split)
-            if (split_datetime == initial_split):
-                train_preds = model.predict(train_x)
-                train['passenger_count_pred'] = train_preds
-
-            test_preds = model.predict(test_x)
-            test_refit['passenger_count_pred'] = test_preds
+            if (len(test_refit) > 0):
+                train_x, train_y, test_x, test_y = feature_extractor_fn(train_refit, test_refit, dependent_variable, stop_stats)
+                refit_test_sets.append(test_refit)
+                model.fit(train_x, train_y)
+                test_preds = model.predict(test_x)
+                test_refit['passenger_count_pred'] = test_preds
+            else:
+                print("No test data found for refit test_period:", split_datetime, refit_interval)
 
             split_datetime += pd.Timedelta(refit_interval)
             counter += 1
