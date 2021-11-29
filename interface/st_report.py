@@ -15,7 +15,8 @@ def st_report():
     selected_experiment = st.selectbox("Select experiment", options=experiments)
     experiment_eval, experiment_model = load_pickled_experiment(SAVED_EXPERIMENT_DIR + selected_experiment)
 
-    st.write(experiment_eval.plot_passenger_count_by_time_of_day('test'))
+    fig1, fig2, fig3 = experiment_eval.plot_passenger_count_by_time_of_day('test')
+    st.write(fig1)
 
     bus_routes = ["B46", "Bx12", "M15"]
     selected_bus_route = st.selectbox("Select a bus route", options=bus_routes)
