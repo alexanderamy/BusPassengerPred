@@ -29,7 +29,7 @@ def add_time_features(df, timestamp_str="timestamp"):
     String timestamp_str: name of timestamp column in df
     returns df
     """
-    df['timestamp_dt'] = pd.to_datetime(df.timestamp)
+    df['timestamp_dt'] = pd.to_datetime(df.timestamp, utc=True)
     df['hour'] = df['timestamp_dt'].dt.hour
     df['day'] = df['timestamp_dt'].dt.day
     df['dow'] = df['timestamp_dt'].dt.weekday
