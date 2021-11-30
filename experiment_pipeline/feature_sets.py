@@ -19,8 +19,13 @@ def compute_stop_stats(train, test):
     return stop_stats
 
 
-def stop_pos_only(train, test, dependent_variable, stop_stats):
-    non_features_bus = ['vehicle_id', 'next_stop_est_sec', 'day', 'month', 'year', 'DoW', 'hour', 'minute', 'trip_id_comp_SDon_bool', 'trip_id_comp_6_dig_id', 'trip_id_comp_3_dig_id', 'timestamp']
+bus_features = ['vehicle_id', 'next_stop_est_sec', 'day', 'month', 'year', 'DoW', 'hour' 'minute', 'trip_id_comp_SDon_bool', 'trip_id_comp_6_dig_id', 'trip_id_comp_3_dig_id', 'timestamp']
+weather_features = ['Precipitation', 'Cloud Cover', 'Relative Humidity', 'Heat Index', 'Max Wind Speed']
+
+
+def bus_pos_and_obs_time(train, test, dependent_variable, stop_stats):
+    # drop non_features from train / test sets
+    non_features_bus = ['vehicle_id', 'next_stop_est_sec', 'day', 'month', 'year', 'minute', 'trip_id_comp_SDon_bool', 'trip_id_comp_6_dig_id', 'trip_id_comp_3_dig_id', 'timestamp']
     non_features_weather = ['Precipitation', 'Cloud Cover', 'Relative Humidity', 'Heat Index', 'Max Wind Speed']
     non_features = non_features_bus + non_features_weather
 

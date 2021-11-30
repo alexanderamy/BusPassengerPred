@@ -6,7 +6,7 @@ from datetime import datetime
 from experiment_pipeline.evaluation import Evaluation
 from experiment_pipeline.feature_sets import compute_stop_stats
 from experiment_pipeline.feature_sets import (
-    stop_pos_only, 
+    bus_pos_and_obs_time, 
     bus_features_with_stop_stats, 
     bus_and_weather_features_with_stop_stats
 )
