@@ -37,23 +37,11 @@ def stop_pos_only(train, test, dependent_variable, stop_stats):
 
 
 def bus_features_with_stop_stats(train, test, dependent_variable, stop_stats):
-    # add columns for mean / std passenger_count per stop to train set
+    # add columns for mean / std passenger_count per stop to train / test sets
     train['avg_stop_passengers'] = train['next_stop_id_pos'].apply(lambda x: stop_stats[('passenger_count', 'mean')].loc[x])
     train['std_stop_passengers'] = train['next_stop_id_pos'].apply(lambda x: stop_stats[('passenger_count', 'std')].loc[x])
-
-    # # add columns for q25 / q50 / q75 passenger_count per stop to train set
-    # train['q25_stop_passengers'] = train['next_stop_id_pos'].apply(lambda x: stop_stats[('passenger_count', 'q25')].loc[x])
-    # train['q50_stop_passengers'] = train['next_stop_id_pos'].apply(lambda x: stop_stats[('passenger_count', 'q50')].loc[x])
-    # train['q75_stop_passengers'] = train['next_stop_id_pos'].apply(lambda x: stop_stats[('passenger_count', 'q75')].loc[x])
-
-    # add columns for mean / std passenger_count per stop to test set
     test['avg_stop_passengers'] = test['next_stop_id_pos'].apply(lambda x: stop_stats[('passenger_count', 'mean')].loc[x])
     test['std_stop_passengers'] = test['next_stop_id_pos'].apply(lambda x: stop_stats[('passenger_count', 'std')].loc[x])
-
-    # # add columns for q25 / q50 / q75 passenger_count per stop to test set
-    # test['q25_stop_passengers'] = train['next_stop_id_pos'].apply(lambda x: stop_stats[('passenger_count', 'q25')].loc[x])
-    # test['q50_stop_passengers'] = train['next_stop_id_pos'].apply(lambda x: stop_stats[('passenger_count', 'q50')].loc[x])
-    # test['q75_stop_passengers'] = train['next_stop_id_pos'].apply(lambda x: stop_stats[('passenger_count', 'q75')].loc[x])
 
     # drop non_features from train / test sets
     non_features_bus = ['day', 'year', 'trip_id_comp_6_dig_id', 'timestamp']
@@ -73,23 +61,11 @@ def bus_features_with_stop_stats(train, test, dependent_variable, stop_stats):
 
 
 def bus_and_weather_features_with_stop_stats(train, test, dependent_variable, stop_stats):
-    # add columns for mean / std passenger_count per stop to train set
+    # add columns for mean / std passenger_count per stop to train / test sets
     train['avg_stop_passengers'] = train['next_stop_id_pos'].apply(lambda x: stop_stats[('passenger_count', 'mean')].loc[x])
     train['std_stop_passengers'] = train['next_stop_id_pos'].apply(lambda x: stop_stats[('passenger_count', 'std')].loc[x])
-
-    # # add columns for q25 / q50 / q75 passenger_count per stop to train set
-    # train['q25_stop_passengers'] = train['next_stop_id_pos'].apply(lambda x: stop_stats[('passenger_count', 'q25')].loc[x])
-    # train['q50_stop_passengers'] = train['next_stop_id_pos'].apply(lambda x: stop_stats[('passenger_count', 'q50')].loc[x])
-    # train['q75_stop_passengers'] = train['next_stop_id_pos'].apply(lambda x: stop_stats[('passenger_count', 'q75')].loc[x])
-
-    # add columns for mean / std passenger_count per stop to test set
     test['avg_stop_passengers'] = test['next_stop_id_pos'].apply(lambda x: stop_stats[('passenger_count', 'mean')].loc[x])
     test['std_stop_passengers'] = test['next_stop_id_pos'].apply(lambda x: stop_stats[('passenger_count', 'std')].loc[x])
-
-    # # add columns for q25 / q50 / q75 passenger_count per stop to test set
-    # test['q25_stop_passengers'] = train['next_stop_id_pos'].apply(lambda x: stop_stats[('passenger_count', 'q25')].loc[x])
-    # test['q50_stop_passengers'] = train['next_stop_id_pos'].apply(lambda x: stop_stats[('passenger_count', 'q50')].loc[x])
-    # test['q75_stop_passengers'] = train['next_stop_id_pos'].apply(lambda x: stop_stats[('passenger_count', 'q75')].loc[x])
 
     # drop non_features from train / test sets
     non_features_bus = ['day', 'year', 'trip_id_comp_6_dig_id','timestamp']
@@ -98,101 +74,6 @@ def bus_and_weather_features_with_stop_stats(train, test, dependent_variable, st
 
     train = train.drop(columns=non_features)
     test = test.drop(columns=non_features)
-
-    # partition train / test sets into features and targets
-    train_x = train.drop(columns=[dependent_variable])
-    train_y = train[dependent_variable]
-    test_x = test.drop(columns=[dependent_variable])
-    test_y = test[dependent_variable]
-
-    return train_x, train_y, test_x, test_y
-
-
-
-
-
-
-
-
-
-
-# DON'T USE: TERRIBLE PERFORMANCE
-
-def normalized_bus_features_with_stop_stats(train, test, dependent_variable, stop_stats):
-    # add columns for mean / std passenger_count per stop to train set
-    train['avg_stop_passengers'] = train['next_stop_id_pos'].apply(lambda x: stop_stats[('passenger_count', 'mean')].loc[x])
-    train['std_stop_passengers'] = train['next_stop_id_pos'].apply(lambda x: stop_stats[('passenger_count', 'std')].loc[x])
-
-    # # add columns for q25 / q50 / q75 passenger_count per stop to train set
-    # train['q25_stop_passengers'] = train['next_stop_id_pos'].apply(lambda x: stop_stats[('passenger_count', 'q25')].loc[x])
-    # train['q50_stop_passengers'] = train['next_stop_id_pos'].apply(lambda x: stop_stats[('passenger_count', 'q50')].loc[x])
-    # train['q75_stop_passengers'] = train['next_stop_id_pos'].apply(lambda x: stop_stats[('passenger_count', 'q75')].loc[x])
-
-    # add columns for mean / std passenger_count per stop to test set
-    test['avg_stop_passengers'] = test['next_stop_id_pos'].apply(lambda x: stop_stats[('passenger_count', 'mean')].loc[x])
-    test['std_stop_passengers'] = test['next_stop_id_pos'].apply(lambda x: stop_stats[('passenger_count', 'std')].loc[x])
-
-    # # add columns for q25 / q50 / q75 passenger_count per stop to test set
-    # test['q25_stop_passengers'] = train['next_stop_id_pos'].apply(lambda x: stop_stats[('passenger_count', 'q25')].loc[x])
-    # test['q50_stop_passengers'] = train['next_stop_id_pos'].apply(lambda x: stop_stats[('passenger_count', 'q50')].loc[x])
-    # test['q75_stop_passengers'] = train['next_stop_id_pos'].apply(lambda x: stop_stats[('passenger_count', 'q75')].loc[x])
-
-    # drop non_features from train / test sets
-    non_features_bus = ['timestamp', 'year', 'day', 'trip_id_comp_6_dig_id']
-    non_features_weather = ['Precipitation', 'Cloud Cover', 'Relative Humidity', 'Heat Index', 'Max Wind Speed']
-    non_features = non_features_bus + non_features_weather
-
-    train = train.drop(columns=non_features)
-    test = test.drop(columns=non_features)
-
-    # fit MinMaxScaler on training data
-    scaler = MinMaxScaler()
-    scaler.fit(train)
-    train = pd.DataFrame(scaler.transform(train), index=train.index, columns=train.columns)
-    test = pd.DataFrame(scaler.transform(test), index=test.index, columns=test.columns)
-
-    # partition train / test sets into features and targets
-    train_x = train.drop(columns=[dependent_variable])
-    train_y = train[dependent_variable]
-    test_x = test.drop(columns=[dependent_variable])
-    test_y = test[dependent_variable]
-
-    return train_x, train_y, test_x, test_y
-    
-
-def normalized_bus_and_weather_features_with_stop_stats(train, test, dependent_variable, stop_stats):
-    # add columns for mean / std passenger_count per stop to train set
-    train['avg_stop_passengers'] = train['next_stop_id_pos'].apply(lambda x: stop_stats[('passenger_count', 'mean')].loc[x])
-    train['std_stop_passengers'] = train['next_stop_id_pos'].apply(lambda x: stop_stats[('passenger_count', 'std')].loc[x])
-
-    # # add columns for q25 / q50 / q75 passenger_count per stop to train set
-    # train['q25_stop_passengers'] = train['next_stop_id_pos'].apply(lambda x: stop_stats[('passenger_count', 'q25')].loc[x])
-    # train['q50_stop_passengers'] = train['next_stop_id_pos'].apply(lambda x: stop_stats[('passenger_count', 'q50')].loc[x])
-    # train['q75_stop_passengers'] = train['next_stop_id_pos'].apply(lambda x: stop_stats[('passenger_count', 'q75')].loc[x])
-
-    # add columns for mean / std passenger_count per stop to test set
-    test['avg_stop_passengers'] = test['next_stop_id_pos'].apply(lambda x: stop_stats[('passenger_count', 'mean')].loc[x])
-    test['std_stop_passengers'] = test['next_stop_id_pos'].apply(lambda x: stop_stats[('passenger_count', 'std')].loc[x])
-
-    # # add columns for q25 / q50 / q75 passenger_count per stop to test set
-    # test['q25_stop_passengers'] = train['next_stop_id_pos'].apply(lambda x: stop_stats[('passenger_count', 'q25')].loc[x])
-    # test['q50_stop_passengers'] = train['next_stop_id_pos'].apply(lambda x: stop_stats[('passenger_count', 'q50')].loc[x])
-    # test['q75_stop_passengers'] = train['next_stop_id_pos'].apply(lambda x: stop_stats[('passenger_count', 'q75')].loc[x])
-
-    # drop non_features from train / test sets
-    non_features_bus = ['timestamp', 'year', 'day', 'trip_id_comp_6_dig_id']
-    non_features_weather = []
-    non_features = non_features_bus + non_features_weather
-
-    train = train.drop(columns=non_features)
-    test = test.drop(columns=non_features)
-
-    # fit scaler on training data
-    # scaler = MinMaxScaler()
-    scaler = StandardScaler()
-    scaler.fit(train)
-    train = pd.DataFrame(scaler.transform(train), index=train.index, columns=train.columns)
-    test = pd.DataFrame(scaler.transform(test), index=test.index, columns=test.columns)
 
     # partition train / test sets into features and targets
     train_x = train.drop(columns=[dependent_variable])
