@@ -202,7 +202,7 @@ if __name__ == "__main__":
     )
 
     print("-- Evaluation on train --")
-    print(experiment_eval.regression_metrics('train'))
+    model_pred_eval, mean_pred_eval = experiment_eval.regression_metrics("train", pretty_print=True)
     print()
     print("-- Evaluation on test --")
-    print(experiment_eval.regression_metrics('test'))
+    model_pred_eval, mean_pred_eval = experiment_eval.regression_metrics("test", pretty_print=True)
