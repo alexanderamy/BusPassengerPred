@@ -192,11 +192,8 @@ if __name__ == "__main__":
     ## run experiment
     experiment_eval = run_experiment(
         global_feature_set=df_route,
-        # feature_extractor_fn=stop_pos_only,
-        # feature_extractor_fn=bus_features_with_stop_stats,
-        feature_extractor_fn=bus_and_weather_features_with_stop_stats,
-        # model=LassoCV(),
-        model=XGBRegressor(learning_rate=0.1, max_depth=5, n_estimators=50, seed=0),
+        feature_extractor_fn=bus_features_with_stop_stats,
+        model=LassoCV(),
         stop_id_ls=stop_id_ls,
         dependent_variable="passenger_count",
         split_heuristic="datetime",
