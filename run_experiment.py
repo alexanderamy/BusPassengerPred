@@ -11,7 +11,7 @@ from experiment_pipeline.feature_sets import (
     bus_and_weather_features_with_stop_stats
 )
 from experiment_pipeline.utils import custom_train_test_split
-from sklearn.linear_model import LassoCV
+from sklearn.linear_model import Lasso
 from xgboost import XGBRegressor
 from experiment_pipeline.data_loader import load_global_feature_set
 
@@ -193,7 +193,7 @@ if __name__ == "__main__":
     experiment_eval = run_experiment(
         global_feature_set=df_route,
         feature_extractor_fn=bus_features_with_stop_stats,
-        model=LassoCV(),
+        model=Lasso(alpha=0.05),
         stop_id_ls=stop_id_ls,
         dependent_variable="passenger_count",
         split_heuristic="datetime",
