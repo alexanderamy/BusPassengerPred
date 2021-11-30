@@ -58,8 +58,9 @@ def bus_pos_and_obs_time(train, test, dependent_variable, stop_stats):
     feature_set_bus = ['next_stop_id_pos', 'DoW','hour']
     feature_set_weather = []
     feature_set = feature_set_bus + feature_set_weather + [dependent_variable]
-    train = train[feature_set].copy()
-    test = test[feature_set].copy()
+    non_features = list(set(train.columns) - set(feature_set))
+    train.drop(columns=non_features, inplace=True)
+    test.drop(columns=non_features, inplace=True)
 
     # partition
     train_x = train.drop(columns=[dependent_variable])
@@ -75,8 +76,9 @@ def bus_features_with_stop_stats(train, test, dependent_variable, stop_stats):
     feature_set_bus = bus_features
     feature_set_weather = []
     feature_set = feature_set_bus + feature_set_weather + [dependent_variable]
-    train = train[feature_set].copy()
-    test = test[feature_set].copy()
+    non_features = list(set(train.columns) - set(feature_set))
+    train.drop(columns=non_features, inplace=True)
+    test.drop(columns=non_features, inplace=True)
 
     # add stop stats
     train, test = add_stop_stats(train, test, stop_stats)
@@ -95,8 +97,9 @@ def bus_and_weather_features_with_stop_stats(train, test, dependent_variable, st
     feature_set_bus = bus_features
     feature_set_weather = weather_features
     feature_set = feature_set_bus + feature_set_weather + [dependent_variable]
-    train = train[feature_set].copy()
-    test = test[feature_set].copy()
+    non_features = list(set(train.columns) - set(feature_set))
+    train.drop(columns=non_features, inplace=True)
+    test.drop(columns=non_features, inplace=True)
 
     # add stop stats
     train, test = add_stop_stats(train, test, stop_stats)
