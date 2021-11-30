@@ -19,20 +19,49 @@ def compute_stop_stats(train, test):
     return stop_stats
 
 
-bus_features = ['vehicle_id', 'next_stop_est_sec', 'day', 'month', 'year', 'DoW', 'hour' 'minute', 'trip_id_comp_SDon_bool', 'trip_id_comp_6_dig_id', 'trip_id_comp_3_dig_id', 'timestamp']
-weather_features = ['Precipitation', 'Cloud Cover', 'Relative Humidity', 'Heat Index', 'Max Wind Speed']
+def add_stop_stats(train, test, stop_stats):
+    train['avg_stop_passengers'] = train['next_stop_id_pos'].apply(lambda x: stop_stats[('passenger_count', 'mean')].loc[x])
+    train['std_stop_passengers'] = train['next_stop_id_pos'].apply(lambda x: stop_stats[('passenger_count', 'std')].loc[x])
+    test['avg_stop_passengers'] = test['next_stop_id_pos'].apply(lambda x: stop_stats[('passenger_count', 'mean')].loc[x])
+    test['std_stop_passengers'] = test['next_stop_id_pos'].apply(lambda x: stop_stats[('passenger_count', 'std')].loc[x])
+    return train, test
+
+
+bus_features = [
+    'vehicle_id',
+    'next_stop_id_pos',
+    'next_stop_est_sec',
+    'month',    
+    'DoW',  
+    'hour',
+    'minute',    
+    'trip_id_comp_SDon_bool',
+    'trip_id_comp_3_dig_id',
+    # 'day',                   # always drop
+    # 'year',                  # always drop
+    # 'trip_id_comp_6_dig_id', # always drop
+    # 'timestamp'              # always drop
+]
+
+
+weather_features = [
+    'Precipitation',
+    'Cloud Cover',
+    'Relative Humidity',
+    'Heat Index',
+    'Max Wind Speed'
+]
 
 
 def bus_pos_and_obs_time(train, test, dependent_variable, stop_stats):
-    # drop non_features from train / test sets
-    non_features_bus = ['vehicle_id', 'next_stop_est_sec', 'day', 'month', 'year', 'minute', 'trip_id_comp_SDon_bool', 'trip_id_comp_6_dig_id', 'trip_id_comp_3_dig_id', 'timestamp']
-    non_features_weather = ['Precipitation', 'Cloud Cover', 'Relative Humidity', 'Heat Index', 'Max Wind Speed']
-    non_features = non_features_bus + non_features_weather
+    # select features
+    feature_set_bus = ['next_stop_id_pos', 'DoW','hour']
+    feature_set_weather = []
+    feature_set = feature_set_bus + feature_set_weather + [dependent_variable]
+    train = train[feature_set].copy()
+    test = test[feature_set].copy()
 
-    train = train.drop(columns=non_features)
-    test = test.drop(columns=non_features)
-
-    # partition train / test sets into features and targets
+    # partition
     train_x = train.drop(columns=[dependent_variable])
     train_y = train[dependent_variable]
     test_x = test.drop(columns=[dependent_variable])
@@ -42,21 +71,17 @@ def bus_pos_and_obs_time(train, test, dependent_variable, stop_stats):
 
 
 def bus_features_with_stop_stats(train, test, dependent_variable, stop_stats):
-    # add columns for mean / std passenger_count per stop to train / test sets
-    train['avg_stop_passengers'] = train['next_stop_id_pos'].apply(lambda x: stop_stats[('passenger_count', 'mean')].loc[x])
-    train['std_stop_passengers'] = train['next_stop_id_pos'].apply(lambda x: stop_stats[('passenger_count', 'std')].loc[x])
-    test['avg_stop_passengers'] = test['next_stop_id_pos'].apply(lambda x: stop_stats[('passenger_count', 'mean')].loc[x])
-    test['std_stop_passengers'] = test['next_stop_id_pos'].apply(lambda x: stop_stats[('passenger_count', 'std')].loc[x])
+    # select features
+    feature_set_bus = bus_features
+    feature_set_weather = []
+    feature_set = feature_set_bus + feature_set_weather + [dependent_variable]
+    train = train[feature_set].copy()
+    test = test[feature_set].copy()
 
-    # drop non_features from train / test sets
-    non_features_bus = ['day', 'year', 'trip_id_comp_6_dig_id', 'timestamp']
-    non_features_weather = ['Precipitation', 'Cloud Cover', 'Relative Humidity', 'Heat Index', 'Max Wind Speed']
-    non_features = non_features_bus + non_features_weather
+    # add stop stats
+    train, test = add_stop_stats(train, test, stop_stats)
 
-    train = train.drop(columns=non_features)
-    test = test.drop(columns=non_features)
-
-    # partition train / test sets into features and targets
+    # partition
     train_x = train.drop(columns=[dependent_variable])
     train_y = train[dependent_variable]
     test_x = test.drop(columns=[dependent_variable])
@@ -66,21 +91,17 @@ def bus_features_with_stop_stats(train, test, dependent_variable, stop_stats):
 
 
 def bus_and_weather_features_with_stop_stats(train, test, dependent_variable, stop_stats):
-    # add columns for mean / std passenger_count per stop to train / test sets
-    train['avg_stop_passengers'] = train['next_stop_id_pos'].apply(lambda x: stop_stats[('passenger_count', 'mean')].loc[x])
-    train['std_stop_passengers'] = train['next_stop_id_pos'].apply(lambda x: stop_stats[('passenger_count', 'std')].loc[x])
-    test['avg_stop_passengers'] = test['next_stop_id_pos'].apply(lambda x: stop_stats[('passenger_count', 'mean')].loc[x])
-    test['std_stop_passengers'] = test['next_stop_id_pos'].apply(lambda x: stop_stats[('passenger_count', 'std')].loc[x])
+    # select features
+    feature_set_bus = bus_features
+    feature_set_weather = weather_features
+    feature_set = feature_set_bus + feature_set_weather + [dependent_variable]
+    train = train[feature_set].copy()
+    test = test[feature_set].copy()
 
-    # drop non_features from train / test sets
-    non_features_bus = ['day', 'year', 'trip_id_comp_6_dig_id','timestamp']
-    non_features_weather = []
-    non_features = non_features_bus + non_features_weather
+    # add stop stats
+    train, test = add_stop_stats(train, test, stop_stats)
 
-    train = train.drop(columns=non_features)
-    test = test.drop(columns=non_features)
-
-    # partition train / test sets into features and targets
+    # partition
     train_x = train.drop(columns=[dependent_variable])
     train_y = train[dependent_variable]
     test_x = test.drop(columns=[dependent_variable])
