@@ -1,9 +1,11 @@
 import argparse
 from datetime import datetime
 from experiment_pipeline.evaluation import Evaluation
-from experiment_pipeline.feature_sets import compute_stop_stats, baseline_important_features
+from experiment_pipeline.feature_sets import compute_stop_stats
+from experiment_pipeline.feature_sets import stop_pos_only, bus_features_with_stop_stats, bus_and_weather_features_with_stop_stats
 from experiment_pipeline.utils import custom_train_test_split
 from sklearn.linear_model import LassoCV
+from xgboost import XGBRegressor
 from experiment_pipeline.data_loader import load_global_feature_set
 import pandas as pd
 import pickle
@@ -18,7 +20,7 @@ def run_experiment(
     dependent_variable="passenger_count",
     split_heuristic="datetime",
     test_size=0.1,
-    split_datetime=datetime(year=2021, month=9, day=15, hour=0, minute=0),
+    split_datetime=datetime(year=2021, month=9, day=24, hour=0, minute=0),
     test_period="1D",
     refit_interval=None,
     random_state=0,
@@ -188,8 +190,10 @@ if __name__ == "__main__":
     ## run experiment
     experiment_eval = run_experiment(
         global_feature_set=df_route,
-        feature_extractor_fn=baseline_important_features,
+        feature_extractor_fn=stop_pos_only,
+        # feature_extractor_fn=bus_and_weather_features_with_stop_stats,
         model=LassoCV(),
+        # model=XGBRegressor(learning_rate=0.1, max_depth=5, n_estimators=50, seed=0),
         stop_id_ls=stop_id_ls,
         dependent_variable="passenger_count",
         split_heuristic="datetime",
@@ -200,7 +204,7 @@ if __name__ == "__main__":
     )
 
     print("-- Evaluation on train --")
-    print(experiment_eval.basic_eval('train'))
+    model_pred_eval, mean_pred_eval = experiment_eval.regression_metrics("train", pretty_print=True)
     print()
     print("-- Evaluation on test --")
-    print(experiment_eval.basic_eval('test'))
+    model_pred_eval, mean_pred_eval = experiment_eval.regression_metrics("test", pretty_print=True)
