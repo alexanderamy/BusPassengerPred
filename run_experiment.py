@@ -86,7 +86,7 @@ def run_experiment(
         test = pd.concat(refit_test_sets)
 
     # Eval
-    eval_instance = Evaluation(global_feature_set=global_feature_set, train=train, test=test, stop_id_ls=stop_id_ls, stop_stats=stop_stats)
+    eval_instance = Evaluation(global_feature_set=global_feature_set, train=train, test=test, stop_id_ls=stop_id_ls, stop_stats=stop_stats, model=model)
 
     if experiment_name is not None:
         with open(os.path.join(experiment_dir, f"{experiment_name}.pickle"), "wb") as f:
