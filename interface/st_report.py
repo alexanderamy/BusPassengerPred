@@ -1,24 +1,10 @@
 import streamlit as st
 import os
 from experiment_pipeline.data_loader import load_global_feature_set
-from run_experiment import load_pickled_experiment
+from interface.st_utils import load_bus_segment_data
+
 import json
 import pandas as pd
-
-SAVED_EXPERIMENT_DIR = "saved_experiments/"
-DATA_DIR = "data/streamlit/"
-
-def load_bus_segment_data(route, processed=True):
-    try:
-        df_route = pd.read_pickle(os.path.join(
-            DATA_DIR,
-            "processed" if processed else "raw",
-            f"{route}_2021-10-18.pickle"
-        ))
-    except Exception as e:
-        st.error(f"Failed to load data for route {route}: {e}")
-        return
-    return df_route
 
 def st_report():
     st.write("""
@@ -43,9 +29,6 @@ def st_report():
     # """)
 
     st.header("Introduction / Motivation")
-    st.write("We open source a repository for working with the NYC bus data, etc...")
-
-    st.write("Something about the experiments we want to run, i.e. adding weather data.")
 
     st.header("Data Collection")
     st.write("""
@@ -71,14 +54,6 @@ def st_report():
     st.write("Correlation matrix")
     st.write("Streamlit table which shows features we focus on & their description")
 
-    st.header("Experiments")
-    st.write("Select to explore an experiment - loads experiment with according description & evaluation of results")
-    experiments = os.listdir(SAVED_EXPERIMENT_DIR)
-    selected_experiment = st.selectbox("Select experiment", options=experiments)
-    experiment_eval, experiment_model = load_pickled_experiment(SAVED_EXPERIMENT_DIR + selected_experiment)
-
-    fig1, fig2, fig3 = experiment_eval.plot_passenger_count_by_time_of_day('test')
-    st.write(fig1)
 
 
     st.header("Conclusion")
