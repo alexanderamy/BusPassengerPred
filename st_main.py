@@ -26,7 +26,7 @@ PAGE_OPTIONS = list(PAGES.keys())
 
 # Sidebar
 st.sidebar.header("BusWatcher | Insights")
-st.sidebar.write("**By the [Urban Hub at Cornell Tech](https://urban.tech.cornell.edu/)**")
+st.sidebar.write("**By the [Urban Tech Hub at Cornell Tech](https://urban.tech.cornell.edu/)**")
 page_selection = st.sidebar.radio("Page navigation", PAGE_OPTIONS)
 page = PAGES[page_selection]
 page()
