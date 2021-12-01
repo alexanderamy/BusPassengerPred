@@ -13,7 +13,14 @@ from sklearn.metrics import (
     balanced_accuracy_score
 )
 from sklearn.base import clone
-from sklearn.linear_model import Lasso
+from sklearn.linear_model import (
+  LinearRegression, 
+  Lasso, 
+  LassoCV, 
+  Ridge,
+  RidgeCV
+)
+from sklearn.svm import SVR
 from sklearn.ensemble import RandomForestRegressor
 from xgboost import XGBRegressor
 
@@ -382,7 +389,7 @@ class Evaluation:
     model = self.model
     if isinstance(model, RandomForestRegressor) or isinstance(model, XGBRegressor):
       importances = model.feature_importances_
-    elif isinstance(model, Lasso):
+    elif isinstance(model, LinearRegression) or isinstance(model, Lasso) or isinstance(model, LassoCV) or isinstance(model, Ridge) or isinstance(model, Ridge) or isinstance(model, SVR):
       importances = np.abs(model.coef_)
     model_importances = pd.Series(importances, index=train_x.columns)
     model_importances = model_importances.sort_values(ascending=False)
