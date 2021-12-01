@@ -52,7 +52,7 @@ def get_data_dict(df, route):
 if (not os.environ.get('PYTHONHTTPSVERIFY', '') and getattr(ssl, '_create_unverified_context', None)):
     ssl._create_default_https_context = ssl._create_unverified_context
 
-def get_shipments(route, years, months):
+def get_shipments(route, months, years):
     gdf = None
     API_BASE_URL = 'http://api.buswatcher.org'
 
@@ -90,19 +90,6 @@ def get_shipments(route, years, months):
                         else:
                             gdf = gdf_temp
     return gdf
-
-
-def save_data(route, **kwargs):
-    save_path = 'data/Bus/API Call'
-    if not os.path.exists(save_path):
-        os.makedirs(save_path)
-    today = datetime.date.today()
-    file_name = f'{route}_{today}.geojson'
-    file_path = os.path.join(save_path, file_name)
-    gdf = get_shipments(route, **kwargs)
-    gdf.to_file(file_path, driver='GeoJSON')
-    print(f'Data saved to {file_path}')
-
 
 mta_routes = {
     'B2',

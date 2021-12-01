@@ -8,7 +8,10 @@ from data_pipeline.data_downloader import get_data_dict
 from data_pipeline.data_processing import (
     remove_non_normalProgreess_observations,
     remove_unique_trip_ids_with_high_pct_nan_passenger_count_readings,
-    remove_delinquent_stops
+    remove_delinquent_stops,
+    add_stop_positions,
+    add_estimated_seconds_to_next_stop,
+    fill_nan_estimated_seconds_to_next_stop
 ) 
 
 parser = argparse.ArgumentParser()
@@ -25,6 +28,7 @@ if __name__ == "__main__":
 
     read_file = args.read_file
     route = read_file.split('_')[0]
+    save_file_processed = read_file
     save_file_stops = route + '.json'
     read_path = 'data/Test/Segment Data - Raw'
     save_path_processed = 'data/Test/Segment Data - Processed'
@@ -45,10 +49,34 @@ if __name__ == "__main__":
 
     with open(os.path.join(save_path_stops, save_file_stops), 'w') as f:
         json.dump(stops_dict, f)
+        print(f'stops_dict saved to: {os.path.join(save_path_stops, save_file_stops)}')
+        print()
     
     remove_delinquent_stops(df, delinquent_stops_dict)
+    add_stop_positions(df, stops_dict)
+    add_estimated_seconds_to_next_stop(df)
+    fill_nan_estimated_seconds_to_next_stop(df)
+    print()
 
+    keep = [
+        'route', 
+        'direction', 
+        'trip_id', 
+        'service_date', 
+        'vehicle_id', 
+        'timestamp', 
+        'lat', 
+        'lon', 
+        'bearing', 
+        'prior_stop_id', 
+        'next_stop_id', 
+        'next_stop_id_pos', 
+        'next_stop_d_along_route', 
+        'next_stop_est_sec', 
+        'passenger_count'
+    ]
 
-
-    
+    df = df[keep]
+    df.to_csv(os.path.join(save_path_processed, save_file_processed), index=False)
+    print(f'processed data saved to {os.path.join(save_path_processed, save_file_processed)}')
   

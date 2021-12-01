@@ -1,6 +1,7 @@
+import os
 import argparse
 import datetime
-from data_pipeline.data_downloader import save_data
+from data_pipeline.data_downloader import get_shipments
 
 parser = argparse.ArgumentParser()
 
@@ -35,10 +36,14 @@ if __name__ == "__main__":
     route = args.route
     months = args.months
     years = args.years
-    
-    # fetch data
-    save_data(
-        route=route, 
-        months=months,  
-        years=years, 
-    )
+
+    save_path = 'data/Bus/API Call'
+    if not os.path.exists(save_path):
+        os.makedirs(save_path)
+    today = datetime.date.today()
+    save_file = f'{route}_{today}.geojson'
+
+    gdf = get_shipments(route, months=months, years=years)
+
+    gdf.to_file(os.path.join(save_path, save_file), driver='GeoJSON')
+    print(f'api response saved to: {os.path.join(save_path, save_file)}')
