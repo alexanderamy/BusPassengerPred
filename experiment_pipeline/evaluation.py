@@ -1,5 +1,7 @@
+import time
 import datetime
 import pandas as pd
+import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.metrics import (
@@ -10,6 +12,18 @@ from sklearn.metrics import (
     max_error,
     balanced_accuracy_score
 )
+from sklearn.base import clone
+from sklearn.linear_model import (
+  LinearRegression, 
+  Lasso, 
+  LassoCV, 
+  Ridge,
+  RidgeCV
+)
+from sklearn.svm import SVR
+from sklearn.ensemble import RandomForestRegressor
+from xgboost import XGBRegressor
+
   
 def is_crowded(stop_id_pos, passenger_counts, stop_stats, method='mean', num_classes=2, spread_multiple=1):
     crowded = []
@@ -53,7 +67,7 @@ def is_crowded(stop_id_pos, passenger_counts, stop_stats, method='mean', num_cla
 
 
 class Evaluation:
-  def __init__(self, global_feature_set=None, train=None, val=None, test=None, stop_id_ls=None, stop_stats=None):
+  def __init__(self, global_feature_set=None, train=None, val=None, test=None, stop_id_ls=None, stop_stats=None, model=None):
     self.global_feature_set = global_feature_set
     self.train = train
     self.val = val
@@ -72,6 +86,7 @@ class Evaluation:
     self.stop_id2stop_pos = {stop_id : stop_pos for (stop_id, stop_pos) in zip(self.stop_id_ls, self.stop_pos_ls)}
     self.stop_pos2stop_id = {stop_pos : stop_id for (stop_id, stop_pos) in zip(self.stop_id_ls, self.stop_pos_ls)}
     self.stop_stats = stop_stats
+    self.model = model
     
   
   def regression_metrics(self, data, segment=None, pretty_print=True):
@@ -353,3 +368,90 @@ class Evaluation:
       fig_dict['DateTime'] = fig
       plt.show()
     return fig_dict['Weekday'], fig_dict['Weekend'], fig_dict['DateTime'] 
+
+
+  def plot_feature_correlation(self, subset=None):
+    train = self.train.drop(columns=['passenger_count_pred'])
+    if subset:
+      corr = train[subset].corr()
+    else:
+      corr = train.corr()
+    fig, ax = plt.subplots(figsize=(20, 20))
+    sns.heatmap(corr, ax=ax, annot=True, fmt='.2g')
+    return fig
+    
+    
+  def plot_feature_importance(self, ablate_features=False):
+    train_x = self.train.drop(columns=['passenger_count', 'passenger_count_pred'])
+    train_y = self.train['passenger_count']
+    test_x = self.test.drop(columns=['passenger_count', 'passenger_count_pred'])
+    test_y = self.test['passenger_count']
+    model = self.model
+    if isinstance(model, RandomForestRegressor) or isinstance(model, XGBRegressor):
+      importances = model.feature_importances_
+    elif isinstance(model, LinearRegression) or isinstance(model, Lasso) or isinstance(model, LassoCV) or isinstance(model, Ridge) or isinstance(model, Ridge) or isinstance(model, SVR):
+      importances = np.abs(model.coef_)
+    model_importances = pd.Series(importances, index=train_x.columns)
+    model_importances = model_importances.sort_values(ascending=False)
+    fig_dict = {'Importance':None, 'MAE':None, 'ME':None, 'R^2':None}
+    if ablate_features:
+      subset_features = []
+      subset_training_times = []
+      subset_test_MAEs = []
+      subset_test_MEs = []
+      subset_test_R2s = []
+      for feature in model_importances.index:
+        subset_features.append(feature)
+        subset_train_x = train_x[subset_features]
+        subset_test_x = test_x[subset_features]
+        ablated_model = clone(model)
+        beg = time.time()
+        ablated_model.fit(subset_train_x, train_y)
+        end = time.time()
+        subset_train_time = end - beg
+        subset_training_times.append(subset_train_time)
+        subset_test_pred = ablated_model.predict(subset_test_x)
+        subset_test_MAE = mean_absolute_error(test_y, subset_test_pred)
+        subset_test_ME = max_error(test_y, subset_test_pred)
+        subset_test_R2 = r2_score(test_y, subset_test_pred)
+        subset_test_MAEs.append(subset_test_MAE)
+        subset_test_MEs.append(subset_test_ME)
+        subset_test_R2s.append(subset_test_R2)
+      metrics = ['MAE', 'ME', 'R^2']
+      metrics_dict = {
+       'MAE':subset_test_MAEs, 
+       'ME':subset_test_MEs, 
+       'R^2':subset_test_R2s
+      }
+      for metric in metrics:
+        fig, ax1 = plt.subplots(figsize=(20, 10))
+        ax1.plot(metrics_dict[metric], label=f'Test {metric} (left)', color='darkorange')
+        ax1.set_xticks(range(model_importances.shape[0]))
+        ax1.set_xticklabels(model_importances.index, rotation=90)
+        ax1.set_ylabel(f'Test {metric}') 
+        ax1.grid(which='major', axis='x', linestyle='--')
+        ax2 = ax1.twinx()  
+        ax2.set_ylabel('Training Time (s)') 
+        ax2.plot(subset_training_times, label='Training Times (Right)', color='navy')
+        lines_1, labels_1 = ax1.get_legend_handles_labels()
+        lines_2, labels_2 = ax2.get_legend_handles_labels()
+        lines = lines_1 + lines_2
+        labels = labels_1 + labels_2
+        ax1.legend(lines, labels)
+        fig.tight_layout()
+        fig_dict[metric] = fig
+        plt.show()
+    else:
+      fig, ax = plt.subplots(figsize=(20, 10))
+      model_importances.plot.bar(ax=ax, color='navy')
+      ax.set_title("Feature Importances")
+      if isinstance(model, RandomForestRegressor):
+        ax.set_ylabel("Importance (Gini)")
+      if isinstance(model, XGBRegressor):
+        ax.set_ylabel("Importance (Gain)")
+      if isinstance(model, Lasso):
+        ax.set_ylabel("Importance (Coefficient)")
+      fig.tight_layout()
+      fig_dict['Importance'] = fig
+      plt.show()
+    return fig_dict['Importance'], fig_dict['MAE'], fig_dict['ME'], fig_dict['R^2']

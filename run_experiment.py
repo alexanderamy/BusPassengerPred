@@ -1,13 +1,19 @@
+import os
+import pickle
 import argparse
+import pandas as pd
 from datetime import datetime
 from experiment_pipeline.evaluation import Evaluation
-from experiment_pipeline.feature_sets import compute_stop_stats, baseline_important_features
+from experiment_pipeline.feature_sets import compute_stop_stats
+from experiment_pipeline.feature_sets import (
+    bus_pos_and_obs_time, 
+    bus_features_with_stop_stats, 
+    bus_and_weather_features_with_stop_stats
+)
 from experiment_pipeline.utils import custom_train_test_split
-from sklearn.linear_model import LassoCV
+from sklearn.linear_model import Lasso
+from xgboost import XGBRegressor
 from experiment_pipeline.data_loader import load_global_feature_set
-import pandas as pd
-import pickle
-import os
 
 def run_experiment(
     global_feature_set,
@@ -17,7 +23,7 @@ def run_experiment(
     dependent_variable="passenger_count",
     split_heuristic="datetime",
     test_size=0.1,
-    split_datetime=datetime(year=2021, month=9, day=15, hour=0, minute=0),
+    split_datetime=datetime(year=2021, month=9, day=17, hour=0, minute=0),
     test_period="1D",
     refit_interval=None,
     random_state=0,
@@ -80,7 +86,7 @@ def run_experiment(
         test = pd.concat(refit_test_sets)
 
     # Eval
-    eval_instance = Evaluation(global_feature_set=global_feature_set, train=train, test=test, stop_id_ls=stop_id_ls, stop_stats=stop_stats)
+    eval_instance = Evaluation(global_feature_set=global_feature_set, train=train, test=test, stop_id_ls=stop_id_ls, stop_stats=stop_stats, model=model)
 
     if experiment_name is not None:
         with open(os.path.join(experiment_dir, f"{experiment_name}.pickle"), "wb") as f:
@@ -186,8 +192,8 @@ if __name__ == "__main__":
     ## run experiment
     experiment_eval = run_experiment(
         global_feature_set=df_route,
-        feature_extractor_fn=baseline_important_features,
-        model=LassoCV(),
+        feature_extractor_fn=bus_features_with_stop_stats,
+        model=Lasso(alpha=0.05),
         stop_id_ls=stop_id_ls,
         dependent_variable="passenger_count",
         split_heuristic="datetime",
@@ -198,7 +204,7 @@ if __name__ == "__main__":
     )
 
     print("-- Evaluation on train --")
-    print(experiment_eval.regression_metrics('train'))
+    model_pred_eval, mean_pred_eval = experiment_eval.regression_metrics("train", pretty_print=True)
     print()
     print("-- Evaluation on test --")
-    print(experiment_eval.regression_metrics('test'))
+    model_pred_eval, mean_pred_eval = experiment_eval.regression_metrics("test", pretty_print=True)
