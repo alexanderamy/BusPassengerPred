@@ -219,7 +219,7 @@ class Evaluation:
     return fig_dict['Weekday'], fig_dict['Weekend'], fig_dict['DateTime']
 
 
-  def gt_pred_scatter(self, data, plot='simple', errors='all', n=100, s=50, y_axis='gt', overlay_weather=False):
+  def gt_pred_scatter(self, data, plot='simple', errors='all', n=1000, s=100, y_axis='gt', overlay_weather=False):
     if data == 'train':
       df = self.global_feature_set_train.copy()
     elif data == 'val':
