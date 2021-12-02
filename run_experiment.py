@@ -10,7 +10,8 @@ from experiment_pipeline.feature_sets import (
     bus_features, 
     bus_features_with_stop_stats, 
     bus_and_weather_features,
-    bus_and_weather_features_with_stop_stats
+    bus_and_weather_features_with_stop_stats,
+    normalized_and_encoded_bus_and_weather_features_with_stop_stats
 )
 from experiment_pipeline.utils import custom_train_test_split
 from sklearn.linear_model import Lasso
@@ -194,7 +195,7 @@ if __name__ == "__main__":
     experiment_eval = run_experiment(
         global_feature_set=df_route,
         feature_extractor_fn=bus_and_weather_features,
-        model=XGBRegressor(learning_rate=0.1, max_depth=5, n_estimators=50, random_state=0),
+        model=XGBRegressor(learning_rate=0.1, max_depth=4, n_estimators=64, random_state=0),
         stop_id_ls=stop_id_ls,
         dependent_variable="passenger_count",
         split_heuristic="datetime",
