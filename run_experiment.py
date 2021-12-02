@@ -116,15 +116,13 @@ def load_pickled_experiment(location):
     with open(location, "rb") as f:
         loaded_experiment = pickle.load(f)
 
-    return (
-        Evaluation(
-            global_feature_set=loaded_experiment["global_feature_set"], 
-            train=loaded_experiment["train"], 
-            test=loaded_experiment["test"], 
-            stop_id_ls=loaded_experiment["stop_id_ls"], 
-            stop_stats=loaded_experiment["stop_stats"]
-        ),
-        loaded_experiment["model"]
+    return Evaluation(
+        global_feature_set=loaded_experiment["global_feature_set"], 
+        train=loaded_experiment["train"], 
+        test=loaded_experiment["test"], 
+        stop_id_ls=loaded_experiment["stop_id_ls"], 
+        stop_stats=loaded_experiment["stop_stats"],
+        model=loaded_experiment["model"]
     )
         
 
