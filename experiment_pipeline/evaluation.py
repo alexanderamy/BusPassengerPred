@@ -219,7 +219,7 @@ class Evaluation:
     return fig_dict['Weekday'], fig_dict['Weekend'], fig_dict['DateTime']
 
 
-  def gt_pred_scatter(self, data, plot='simple', errors='all', n=100, s=50, gt_y=True, overlay_weather=False):
+  def gt_pred_scatter(self, data, plot='simple', errors='all', n=100, s=50, y_axis='gt', overlay_weather=False):
     if data == 'train':
       df = self.global_feature_set_train.copy()
     elif data == 'val':
@@ -272,12 +272,12 @@ class Evaluation:
           over_est_gt = over_est_df['passenger_count']
           over_est_pred = over_est_df['passenger_count_pred']
           over_est_errors = over_est_df['pred_abs_error']
-          if gt_y:
+          if y_axis == 'gt':
             over_est_ss = [s * max(1, error) for error in over_est_errors]
             ax.scatter(over_est_col_obs, over_est_gt, s=over_est_ss, marker='o', label='Prediction', color='navy')
             ax.scatter(over_est_col_obs, over_est_gt, s=s, marker='o', label='Ground Truth', color='darkorange')
             y_label = 'Ground Truth Passenger Count'
-          else:
+          elif y_axis == 'pred':
             over_est_ss = [s * min(1, 1 / error) for error in over_est_errors]
             ax.scatter(over_est_col_obs, over_est_pred, s=s, marker='o', label='Prediction', color='navy')
             ax.scatter(over_est_col_obs, over_est_pred, s=over_est_ss, marker='o', label='Ground Truth', color='darkorange')
@@ -288,12 +288,12 @@ class Evaluation:
           under_est_gt = under_est_df['passenger_count']
           under_est_pred = under_est_df['passenger_count_pred']
           under_est_errors = under_est_df['pred_abs_error']
-          if gt_y:
+          if y_axis == 'gt':
             under_est_ss = [s * min(1, 1 / error) for error in under_est_errors]
             ax.scatter(under_est_col_obs, under_est_gt, s=s, marker='o', color='darkorange')
             ax.scatter(under_est_col_obs, under_est_gt, s=under_est_ss, marker='o', color='navy')
             y_label = 'Ground Truth Passenger Count'
-          else:
+          elif y_axis == 'pred':
             under_est_ss = [s * max(1, error) for error in under_est_errors]
             ax.scatter(under_est_col_obs, under_est_pred, s=under_est_ss, marker='o', color='darkorange')
             ax.scatter(under_est_col_obs, under_est_pred, s=s, marker='o', color='navy')
@@ -332,12 +332,12 @@ class Evaluation:
       over_est_gt = over_est_df['passenger_count']
       over_est_pred = over_est_df['passenger_count_pred']
       over_est_errors = over_est_df['pred_abs_error']
-      if gt_y:
+      if y_axis == 'gt':
         over_est_ss = [s * max(1, error) for error in over_est_errors]
         ax.scatter(over_est_timestamp_obs, over_est_gt, s=over_est_ss, marker='o', label='Prediction', color='navy')
         ax.scatter(over_est_timestamp_obs, over_est_gt, s=s, marker='o', label='Ground Truth', color='darkorange')
         y_label = 'Ground Truth Passenger Count'
-      else:
+      elif y_axis == 'pred':
         over_est_ss = [s * min(1, 1 / error) for error in over_est_errors]
         ax.scatter(over_est_timestamp_obs, over_est_pred, s=s, marker='o', label='Prediction', color='navy')
         ax.scatter(over_est_timestamp_obs, over_est_pred, s=over_est_ss, marker='o', label='Ground Truth', color='darkorange')
@@ -348,12 +348,12 @@ class Evaluation:
       under_est_gt = under_est_df['passenger_count']
       under_est_pred = under_est_df['passenger_count_pred']
       under_est_errors = under_est_df['pred_abs_error']
-      if gt_y:
+      if y_axis == 'gt':
         under_est_ss = [s * min(1, 1 / error) for error in under_est_errors]
         ax.scatter(under_est_timestamp_obs, under_est_gt, s=s, marker='o', color='darkorange')
         ax.scatter(under_est_timestamp_obs, under_est_gt, s=under_est_ss, marker='o', color='navy')
         y_label = 'Ground Truth Passenger Count'
-      else:
+      elif y_axis == 'pred':
         under_est_ss = [s * max(1, error) for error in under_est_errors]
         ax.scatter(under_est_timestamp_obs, under_est_pred, s=under_est_ss, marker='o', color='darkorange')
         ax.scatter(under_est_timestamp_obs, under_est_pred, s=s, marker='o', color='navy')
