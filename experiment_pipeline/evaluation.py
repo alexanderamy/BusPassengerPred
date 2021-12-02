@@ -219,7 +219,7 @@ class Evaluation:
     return fig_dict['Weekday'], fig_dict['Weekend'], fig_dict['DateTime']
 
 
-  def gt_pred_scatter(self, data, plot='simple', errors='all', n=100, s=50, gt_y=True):
+  def gt_pred_scatter(self, data, plot='simple', errors='all', n=100, s=50, gt_y=True, overlay_weather=False):
     if data == 'train':
       df = self.global_feature_set_train.copy()
     elif data == 'val':
@@ -249,8 +249,8 @@ class Evaluation:
           gt = df[df['day_type'] == day_type]['passenger_count']
           pred = df[df['day_type'] == day_type]['passenger_count_pred']
           ax.scatter(pred, gt, s=s, marker='o', color='navy', alpha=0.25)
-          ax.set_xlim([min(gt.min(), pred.min()), max(gt.max(), pred.max())])
-          ax.set_ylim([min(gt.min(), pred.min()), max(gt.max(), pred.max())])
+          ax.set_xlim([min(gt.min(), pred.min()) - 5, max(gt.max(), pred.max()) + 5])
+          ax.set_ylim([min(gt.min(), pred.min()) - 5, max(gt.max(), pred.max()) + 5])
           ax.plot(ax.get_xlim(), ax.get_xlim(), color='darkorange', scalex=False, scaley=False)
           ax.set_xlabel('Predicted Passenger Count')
           ax.set_ylabel('Ground Truth Passenger Count')
@@ -315,16 +315,17 @@ class Evaluation:
           plt.show()
     elif plot == 'datetime':
       fig, ax = plt.subplots(figsize=(20, 10))
-      for i in range(len(precip_dts)):
-        if i < len(precip_dts) - 1:
-          ax.axvspan(precip_dts[i], (precip_dts[i] + datetime.timedelta(hours=1)), facecolor='blue', edgecolor='none', alpha=0.5)
-        else:
-          ax.axvspan(precip_dts[i], (precip_dts[i] + datetime.timedelta(hours=1)), label='Rain', facecolor='blue', edgecolor='none', alpha=0.5)
-      for i in range(len(heat_dts)):
-        if i < len(heat_dts) - 1:
-          ax.axvspan(heat_dts[i], (heat_dts[i] + datetime.timedelta(hours=1)), facecolor='red', edgecolor='none', alpha=0.5)
-        else:
-          ax.axvspan(heat_dts[i], (heat_dts[i] + datetime.timedelta(hours=1)), label='Heat', facecolor='red', edgecolor='none', alpha=0.5)
+      if overlay_weather:
+        for i in range(len(precip_dts)):
+          if i < len(precip_dts) - 1:
+            ax.axvspan(precip_dts[i], (precip_dts[i] + datetime.timedelta(hours=1)), facecolor='blue', edgecolor='none', alpha=0.5)
+          else:
+            ax.axvspan(precip_dts[i], (precip_dts[i] + datetime.timedelta(hours=1)), label='Rain', facecolor='blue', edgecolor='none', alpha=0.5)
+        for i in range(len(heat_dts)):
+          if i < len(heat_dts) - 1:
+            ax.axvspan(heat_dts[i], (heat_dts[i] + datetime.timedelta(hours=1)), facecolor='red', edgecolor='none', alpha=0.5)
+          else:
+            ax.axvspan(heat_dts[i], (heat_dts[i] + datetime.timedelta(hours=1)), label='Heat', facecolor='red', edgecolor='none', alpha=0.5)
       # model predictions too high (plot gt markers on top of pred markers)
       over_est_df = df[(df['pred_error'] >= 0)]
       over_est_timestamp_obs = over_est_df['timestamp']
