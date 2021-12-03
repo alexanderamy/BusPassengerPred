@@ -1,12 +1,30 @@
 import streamlit as st
-import os
-from experiment_pipeline.data_loader import load_global_feature_set
 import pandas as pd
+from run_experiment import load_pickled_experiment
 
 SAVED_EXPERIMENT_DIR = "saved_experiments/"
 DATA_DIR = "data/streamlit/"
 
 def st_demo_weather():
+    eval_lr_bus = load_pickled_experiment(SAVED_EXPERIMENT_DIR + 'Lasso-Bus.pickle')
+    eval_xg_bus = load_pickled_experiment(SAVED_EXPERIMENT_DIR + 'XGBoost-Bus.pickle')
+    eval_xg_bus_weather = load_pickled_experiment(SAVED_EXPERIMENT_DIR + 'XGBoost-BusWeather.pickle')
+
+    lr_bus_pred_metrics, mean_pred_metrics = eval_lr_bus.regression_metrics("test", pretty_print=False)
+    xg_bus_pred_metrics, _ = eval_xg_bus.regression_metrics("test", pretty_print=False)
+    predict_training_mean_MAE = mean_pred_metrics[0]
+    predict_training_mean_R2 = mean_pred_metrics[2]
+    lr_bus_MAE = lr_bus_pred_metrics[0]
+    lr_bus_R2 = lr_bus_pred_metrics[2]
+    xg_bus_MAE = xg_bus_pred_metrics[0]
+    xg_bus_R2 = xg_bus_pred_metrics[2]
+    
+    xg_bus_pred_metrics, _ = eval_xg_bus.regression_metrics("test", pretty_print=False)
+    xg_bus_weather_pred_metrics, _ = eval_xg_bus_weather.regression_metrics("test", pretty_print=False)
+    xg_bus_MAE = xg_bus_pred_metrics[0]
+    xg_bus_R2 = xg_bus_pred_metrics[2]
+    xg_bus_weather_MAE = xg_bus_weather_pred_metrics[0]
+    xg_bus_weather_R2 = xg_bus_weather_pred_metrics[2]
     st.header("Motivation")
     st.write("""
         The motivation behind a lot of this work was to understand how severe weather impacts bus ridership in NYC. Let’s see how the tools we developed can be used to gain insight into that question.
@@ -23,44 +41,78 @@ def st_demo_weather():
     """)
 
     # TODO: train_bus_weather.head()
+    st.dataframe(eval_xg_bus_weather.train.head())
 
     st.subheader("Model Selection")
     st.subheader("Linear - possible to do sub-subheader?")
-    st.write("""
-        Our first attempt at establishing a baseline model was to train a first-degree, L1-regularized linear regressor on 6 of our 8 weeks of bus data, then test on the final 2 weeks. To evaluate performance, we looked primarily at mean absolute error (MAE) on basis of interpretability with respect to the prediction task at hand (i.e., how many people are currently on the bus). Overall, our linear model performed surprisingly well for a baseline, with an MAE of 7.8 on the test set, meaning that, on average, it was able to correctly predict occupancy to within +/- 8 people relative to the number of riders actually observed. When you stop and think about it, that’s not bad at all. In fact, you probably wouldn’t even notice whether there were 8 more or 8 fewer passengers on a given bus (particularly the larger articulated ones that serve the B46). Indeed, we can see our model does a pretty good job of capturing the ebb end flow of ridership over the course of a day (at least at a macro level).
+    st.write(f"""
+        Our first attempt at establishing a baseline model was to train a first-degree, L1-regularized linear regressor the first 6 of our 8 weeks of bus data, then test on the final 2 weeks. To evaluate performance, we looked primarily at mean absolute error (MAE) on basis of interpretability with respect to the prediction task at hand (i.e., how many people are currently on the bus). Overall, our linear model performed surprisingly well for a baseline, with an MAE of {lr_bus_MAE:.1f} on the test set, meaning that, on average, it was able to correctly predict occupancy to within roughly {int(round(lr_bus_MAE))} people relative to the number of riders actually observed. When you stop and think about it, that’s not bad at all. In fact, you probably wouldn’t even notice whether there were 8 more or 8 fewer passengers on a given bus (particularly the larger articulated ones that serve the B46). Indeed, we can see our model does a pretty good job of capturing the ebb end flow of ridership over the course of a day.
     """)
 
     # TODO: Lasso.experiment_eval.plot_passenger_count_by_time_of_day (sum)
+    fig_weekday, fig_weekend, fig_datetime = eval_lr_bus.plot_passenger_count_by_time_of_day('train', segment=None, agg='sum')
+    st.write(fig_weekday)
+    st.write(fig_weekend)
 
     st.write("""
         However, that’s not all we care about when evaluating the performance of a regression model. We also want to understand how well it captures the variance in the data. We can see below that our baseline struggles mightily here.
     """)
 
     # TODO: streamlit: Lasso.experiment_eval.plot_passenger_count_by_time_of_day (mean)
+    fig_weekday, fig_weekend, fig_datetime = eval_lr_bus.plot_passenger_count_by_time_of_day('train', segment=None, agg='mean')
+    st.write(fig_weekday)
+    st.write(fig_weekend)
     
-    st.write("""
-        This is confirmed by an abysmal R^2 score of -0.02, meaning that as good as things were looking for us a minute ago, our baseline is actually a slightly worse model than simply predicting per stop passenger count averages learned on the training set, which achieves MAE and R^2 scores of 7.7 and 0.00, respectively.
+    st.write(f"""
+        This is confirmed by an abysmal R^2 score of {lr_bus_MAE:.2f}, meaning that as good as things were looking for us a minute ago, our baseline is actually a slightly worse model than simply predicting per stop passenger count averages learned on the training set, which achieves MAE and R^2 scores of {predict_training_mean_MAE:.1f} and {predict_training_mean_R2:.2f}, respectively.
         
         We can do better...
     """)
     
     st.subheader("Gradient Boosted Tree - possible to do sub-subheader?")
     st.write("""
-        To address underfitting, we decided to go with a more expressive model class for our second attempt at establishing a baseline, namely XGBoost. Right away, we see a marked improvement in both average error and explanation of variance:
+        To address underfitting, we decided to experiment with a more expressive model class for our second attempt at establishing a baseline, namely Gradient Boosted Trees (XGBoost was the particular implementation we used). Right away, we see a marked improvement in both average error and explanation of variance:
     """)
 
     # TODO: summary results df1... see doc
-    # TODO: XGBoost.experiment_eval.plot_passenger_count_by_time_of_day (sum)
-    # TODO: XGBoost.experiment_eval.plot_passenger_count_by_time_of_day (mean)
+    index = ['Predict Training Mean', 'Lasso', 'XGBoost']
+    columns = ['MAE', 'R^2']
+
+    summary_results1 = pd.DataFrame(
+        [
+            [predict_training_mean_MAE, predict_training_mean_R2],
+            [lr_bus_MAE, lr_bus_R2],
+            [xg_bus_MAE, xg_bus_R2]
+        ],
+        index=index,
+        columns=columns
+    )
+
+    st.dataframe(summary_results1)
+    
+    # TODO: XGBoost.experiment_eval.plot_passenger_count_by_time_of_day (sum + mean)
+    agg = st.selectbox("Aggregation Method", options=['Sum', 'Mean'], key=1)
+    agg = agg.lower()
+    fig_weekday, fig_weekend, fig_datetime = eval_xg_bus.plot_passenger_count_by_time_of_day('test', segment=None, agg=agg)
+    st.write(fig_weekday)
+    st.write(fig_weekend)
 
     st.write("""
-        Although things look pretty good in terms of the underfitting problem we were trying to solve with XGBoost, when thinking about predicted versus ground truth passenger counts across the whole route, they break down a bit when you start drilling down to stop-specific predictions (which, although we didn’t show, were also an issue for our linear model):
+        Despite the improvement in overall fit and prediction variance, our model was still not able to achieve the level of expressiveness we’d like to have seen on a per-stop basis:
     """)
 
     # TODO: XGBoost.experiment_eval.plot_passenger_count_by_time_of_day (mean, stop) – include dropdown with all the stops 
+    segments = eval_xg_bus.stop_id_ls
+    segment = st.selectbox("Stop", options=segments)
+    segment = eval_xg_bus.stop_id2stop_pos[segment]
+    agg = st.selectbox("Aggregation Method", options=['Sum', 'Mean'], key=2)
+    agg = agg.lower()
+    fig_weekday, fig_weekend, fig_datetime = eval_xg_bus.plot_passenger_count_by_time_of_day('test', segment=segment, agg=agg)
+    st.write(fig_weekday)
+    st.write(fig_weekend)
 
     st.write("""
-        Admittedly, there are a lot of potential reasons that one might see this kind of behavior but since we believe it speaks more to higher-level decisions around problem formulation, data modeling, and training procedures than algorithm selection. So, for now we’ll press forward with XGBoost as our baseline and leave the discussion of our approach’s shortcomings for a later section.
+        Admittedly, there are a lot of potential reasons that one might see this kind of behavior but since we believe it speaks more to higher-level decisions made around problem formulation, data modeling, and training procedures than algorithm selection, we’ll press forward with XGBoost as our baseline for now and leave the discussion of our approach’s shortcomings for a later section.
     """)
 
     st.header("Adding Weather Features")
@@ -69,9 +121,22 @@ def st_demo_weather():
     """)
 
     # TODO: summary results df2... see doc
+    index = ['XGBoost - Bus', 'XGBoost - Bus + Weather']
+    columns = ['MAE', 'R^2']
+
+    summary_results1 = pd.DataFrame(
+        [
+            [xg_bus_MAE, xg_bus_R2],
+            [xg_bus_weather_MAE, xg_bus_weather_R2],
+        ],
+        index=index,
+        columns=columns
+    )
+
+    st.dataframe(summary_results1)
 
     st.write("""
-        What we find, is that adding weather features actually diminishes our model’s predictive capacity—how disappointing!
+        What we find is that adding weather features actually diminishes our model’s predictive capacity—how disappointing!
 
         Now, if, hypothetically speaking, you were trying to predict bus occupancy using time, location, and weather data for a course project, you might consider, instead, shifting the focus of your work toward the development of an open-source repo that others can use to push the ball forward, for example. :P
 
@@ -81,20 +146,55 @@ def st_demo_weather():
     """)
     
     # TODO: streamlit: plot_feature_correlation(subset=[bus, weather, and all features]) – dropdown
+    bus_features_ls = [
+        'vehicle_id',
+        'next_stop_id_pos',
+        'next_stop_est_sec',
+        'DoW',  
+        'hour',
+        'minute',    
+        'trip_id_comp_SDon_bool',
+        'trip_id_comp_3_dig_id',
+        # 'day',                   # always drop
+        # 'month',                 # always drop
+        # 'year',                  # always drop
+        # 'trip_id_comp_6_dig_id', # always drop
+        # 'timestamp'              # always drop
+    ]
+    weather_features_ls = [
+        'Precipitation',
+        'Cloud Cover',
+        'Relative Humidity',
+        'Heat Index',
+        'Max Wind Speed'
+    ]
+    subsets_dict = {
+        'All':bus_features_ls + weather_features_ls + ['passenger_count'],
+        'Bus':bus_features_ls + ['passenger_count'],
+        'Weather':weather_features_ls + ['passenger_count']
+    }
+    subset = st.selectbox("Feature Subset", options=['All', 'Bus', 'Weather'])
+    subset = subsets_dict[subset]
+    fig_corr = eval_xg_bus_weather.plot_feature_correlation(subset=subset)
+    st.write(fig_corr)
 
-    st.write("""
-        Interestingly, heat index and relative humidity are the two most highly-correlated features with passenger count.  While this implies that the inclusion of such features would improve the predictions of a linear model, our current baseline has learned non-linear relationships between the features that are more relevant to the prediction task than the linear relationships described in the correlation matrix above. Indeed, although adding weather features to our preliminary Lasso model, for instance, would see MAE and R^2 scores improve to 7.6 and 0.01, from 7.8 and -0.02, respectively, it still vastly underperforms the current XGBoost baseline.
+    st.write(f"""
+        Interestingly, heat index and relative humidity are the two most highly-correlated features with passenger count.  While this implies that the inclusion of such features would improve the predictions of a linear model, our current baseline has learned non-linear relationships between the features that are more relevant to the prediction task than the linear relationships described in the correlation matrix above. Indeed, although adding weather features to our preliminary Lasso model, for instance, would see MAE and R^2 scores improve to 7.6 and 0.01, from {lr_bus_MAE:.1f} and {lr_bus_R2:.2f}, respectively, it still vastly underperforms the current XGBoost baseline.
 
-        To (begin to) get a sense for the non-linear relationships learned by our baseline, we can inspect feature importance, which, in the context of XGBoost, is basically a measure of information gain:
+        To (begin to) get a sense for the non-linear relationships learned by our baseline, we can inspect feature importance, which, in the context of XGBoost, is a measure of information gain:
     """)
     
     # TODO: XGBoost.experiment_eval. plot_feature_importance(ablate_features=False)
+    importance, mae, me, r2 = eval_xg_bus_weather.plot_feature_importance(ablate_features=False)
+    st.write(importance)
 
     st.write("""
         Going a step further, we can see how each the inclusion of each successive feature improves or diminishes model performance:
     """)
 
-    # TODO: XGBoost.experiment_eval. plot_feature_importance(ablate_features=True)
+    importance, mae, me, r2 = eval_xg_bus_weather.plot_feature_importance(ablate_features=True)
+    st.write(mae)
+    st.write(r2)
 
     st.write("""
         The upshot is that not only are weather features of minimal importance to our baseline, it can achieve essentially peak performance using only just time and location!
@@ -103,11 +203,17 @@ def st_demo_weather():
     """)
 
     # TODO: XGBoost.experiment_eval.gt_pred_scatter(data=data_toggle=[‘train’, ‘test’], plot='datetime', errors=error_toggle=['large', ‘small’, ‘all’], n=n_toggle=[50, 100, 500, 1000])
-    
+    # fig_weekday, fig_weekend, fig_datetime = eval_xg_bus_weather.gt_pred_scatter(data='train', plot='datetime', errors='small', n=1000, y_axis='gt', overlay_weather=True)
+    st.subheader("Train")
+    fig_weekday, fig_weekend, fig_datetime = eval_xg_bus_weather.gt_pred_scatter('train', plot='datetime', errors='large', n=1000, s=0, y_axis='gt', overlay_weather=True)
+    st.write(fig_datetime)
+    st.subheader("Test")
+    fig_weekday, fig_weekend, fig_datetime = eval_xg_bus_weather.gt_pred_scatter('test', plot='datetime', errors='large', n=1000, s=0, y_axis='gt', overlay_weather=True)
+    st.write(fig_datetime)
     st.write("""
-        Ignoring the dots for a moment (more on that in the section on error analysis), we can see that a big issue from an evaluation perspective is that there are no weather events in our testing data! How is a model that learns, for example, that fewer people take the bus on hot and humid days supposed to perform on a test set that doesn’t have any hot and humid days? 
+        We can see that a potential issue from an evaluation perspective is that there are very few weather events in our testing data! How is a model that learns, for example, that fewer people take the bus on hot and humid days supposed to perform on a test set that doesn’t have any hot and humid days?
         
-        Overall, as with the low variance observed in our baseline’s stop-specific predictions, we view its inability to glean information related to the prediction task from weather features as more of a high-level issue than one of model selection. Moreover, we believe there exist significant room to improve the approach to this problem than the one outlined above.
+        As with the low variance observed in our baseline model’s stop-specific predictions, we view its inability to glean information related to the prediction task from weather features as more of a high-level issue than one of model selection. Moreover, we believe there exist significant room to improve the approach to this problem than the one outlined above.
     """)
 
     st.header("Error Analysis")
@@ -118,12 +224,43 @@ def st_demo_weather():
     """)
 
     # TODO: XGBoost. experiment_eval.gt_pred_scatter('test', errors='all', n=100, s=200) – all toggles except “s”…
+    y_axis_dict = {
+        'Ground Truth':'gt',
+        'Prediction':'pred',
+    }
+    data = st.selectbox("Dataset", options=['Test', 'Train'], key=1)
+    data = data.lower()
+    errors = st.selectbox("Errors", options=['Large', 'Small', 'All'], key=1)
+    errors = errors.lower()
+    n = st.selectbox("Number", options=[5000, 1000, 500, 100, 50], key=1)
+    fig_weekday, fig_weekend, fig_datetime = eval_xg_bus_weather.gt_pred_scatter(data=data, plot='simple', errors=errors, n=n)
+    st.write(fig_weekday)
+    st.write(fig_weekend)
 
     st.write("""
         But because time and space are dimensions to consider (i.e., date, time of day, bus stop, etc.), being able to disambiguate errors made along these dimensions is critical for model development
     """)
 
     # TODO: XGBoost. experiment_eval.gt_pred_scatter('test', plot='simple', errors='all', n=100, s=200, y_axis='gt', overlay_weather=False) – all the toggles…
+    y_axis_dict = {
+        'Ground Truth':'gt',
+        'Prediction':'pred',
+    }
+    data = st.selectbox("Dataset", options=['Test', 'Train'], key=2)
+    data = data.lower()
+    plot = st.selectbox("Plot By", options=['Stop', 'Hour', 'DateTime'])
+    plot = plot.lower()
+    errors = st.selectbox("Errors", options=['Large', 'Small', 'All'], key=2)
+    errors = errors.lower()
+    n = st.selectbox("Number", options=[5000, 1000, 500, 100, 50], key=2)
+    y_axis = st.selectbox("Y Axis", options=['Ground Truth', 'Prediction'])
+    y_axis = y_axis_dict[y_axis]
+    fig_weekday, fig_weekend, fig_datetime = eval_xg_bus_weather.gt_pred_scatter(data=data, plot=plot, errors=errors, n=n, y_axis=y_axis)
+    if plot == 'datetime':
+        st.write(fig_datetime)
+    else:
+        st.write(fig_weekday)
+        st.write(fig_weekend)
 
     st.header("Parting Thoughts")
     st.write("""
