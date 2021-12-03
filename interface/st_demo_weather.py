@@ -6,7 +6,7 @@ SAVED_EXPERIMENT_DIR = "saved_experiments/"
 DATA_DIR = "data/streamlit/"
 
 def st_demo_weather():
-    eval_lr_bus = load_pickled_experiment(SAVED_EXPERIMENT_DIR + 'Lasso-Bus.pickle')
+    eval_lr_bus = load_pickled_experiment(SAVED_EXPERIMENT_DIR + 'Linear-Bus.pickle')
     eval_xg_bus = load_pickled_experiment(SAVED_EXPERIMENT_DIR + 'XGBoost-Bus.pickle')
     eval_xg_bus_weather = load_pickled_experiment(SAVED_EXPERIMENT_DIR + 'XGBoost-BusWeather.pickle')
 
@@ -62,7 +62,7 @@ def st_demo_weather():
     st.write(fig_weekend)
     
     st.write(f"""
-        This is confirmed by an abysmal R^2 score of {lr_bus_MAE:.2f}, meaning that as good as things were looking for us a minute ago, our baseline is actually a slightly worse model than simply predicting per stop passenger count averages learned on the training set, which achieves MAE and R^2 scores of {predict_training_mean_MAE:.1f} and {predict_training_mean_R2:.2f}, respectively.
+        This is confirmed by an abysmal R^2 score of {lr_bus_R2:.2f}, meaning that as good as things were looking for us a minute ago, our baseline is only slightly better than a naive model than simply predicts stop-wise means learned on the training set, which achieves MAE and R^2 scores of {predict_training_mean_MAE:.1f} and {predict_training_mean_R2:.2f}, respectively.
         
         We can do better...
     """)
@@ -72,7 +72,7 @@ def st_demo_weather():
         To address underfitting, we decided to experiment with a more expressive model class for our second attempt at establishing a baseline, namely Gradient Boosted Trees (XGBoost was the particular implementation we used). Right away, we see a marked improvement in both average error and explanation of variance:
     """)
 
-    index = ['Predict Training Mean', 'Lasso', 'XGBoost']
+    index = ['Predict Training Mean', 'Linear', 'XGBoost']
     columns = ['MAE', 'R^2']
 
     summary_results1 = pd.DataFrame(
@@ -172,7 +172,7 @@ def st_demo_weather():
     st.write(fig_corr)
 
     st.write(f"""
-        Interestingly, heat index and relative humidity are the two most highly-correlated features with passenger count.  While this implies that the inclusion of such features would improve the predictions of a linear model, our current baseline has learned non-linear relationships between the features that are more relevant to the prediction task than the linear relationships described in the correlation matrix above. Indeed, although adding weather features to our preliminary Lasso model, for instance, would see MAE and R^2 scores improve to 7.6 and 0.01, from {lr_bus_MAE:.1f} and {lr_bus_R2:.2f}, respectively, it still vastly underperforms the current XGBoost baseline.
+        Interestingly, heat index and relative humidity are the two most highly-correlated features with passenger count.  While this implies that the inclusion of such features would improve the predictions of a linear model, our current baseline has learned non-linear relationships between the features that are more relevant to the prediction task than the linear relationships described in the correlation matrix above. Indeed, although adding weather features to our preliminary linear model, for instance, would see MAE and R^2 scores improve to 7.6 and 0.02, from {lr_bus_MAE:.1f} and {lr_bus_R2:.2f}, respectively, it still vastly underperforms the current XGBoost baseline.
 
         To (begin to) get a sense for the non-linear relationships learned by our baseline, we can inspect feature importance, which, in the context of XGBoost, is a measure of information gain:
     """)

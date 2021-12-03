@@ -67,7 +67,7 @@ def normalized_bus_features(train, test, dependent_variable, stop_stats):
     non_features = list(set(train.columns) - set(feature_set))
     train.drop(columns=non_features, inplace=True)
     test.drop(columns=non_features, inplace=True)
-    train, test = normalize(train, test)
+    normalize(train, test)
     # partition
     train_x = train.drop(columns=[dependent_variable])
     train_y = train[dependent_variable]
