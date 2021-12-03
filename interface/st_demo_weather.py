@@ -62,7 +62,7 @@ def st_demo_weather():
     st.write(fig_weekend)
     
     st.write(f"""
-        This is confirmed by an abysmal R^2 score of {lr_bus_R2:.2f}, meaning that as good as things were looking for us a minute ago, our baseline is only slightly better than a naive model than simply predicts stop-wise means learned on the training set, which achieves MAE and R^2 scores of {predict_training_mean_MAE:.1f} and {predict_training_mean_R2:.2f}, respectively.
+        This is confirmed by an abysmal R^2 score of {lr_bus_R2:.2f}, meaning that as promising as things were looking for us a moment ago, our baseline is essentially no better than a naive model that always predicts the mean passenger count observed in the training data.
         
         We can do better...
     """)
