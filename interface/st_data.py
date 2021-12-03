@@ -2,15 +2,13 @@ import streamlit as st
 from interface.st_utils import load_bus_segment_data
 
 def st_data():
-    st.header("Data Collection")
-    st.write("""
-    #### Todos:
-    - Say something about the value of open city data
-    - Link to notebook, api documentation for the data pipeline
-    - Mention Bx12 and M15 (/other bus routes) in the intro
-    - Say something about other cities
-    """)
+    # TODO:
+    # - Say something about the value of open city data
+    # - Link to notebook, api documentation for the data pipeline
+    # - Mention Bx12 and M15 (/other bus routes) in the intro
+    # - Say something about other cities
 
+    st.header("Data Collection")
     st.write("""
     We leveraged Dr. Anthony Townsend’s [public NYCBusWatcher API](https://github.com/Cornell-Tech-Urban-Tech-Hub/nycbuswatcher) 
     to generate 398,096 rows of data comprising once-a-minute observations of the location, occupancy, and other metrics reported
