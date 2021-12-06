@@ -14,7 +14,7 @@ def render_landing_page():
              the best performing models and give insight into experiments. It provides utility methods for fetching data, running experiments for building prediction models and a
              standardized evaluation suite.
              
-             The work presented here was born of an endeaver to study the impact of weather data 
+             The work presented here was born of an endeavor to study the impact of weather data 
              on bus rider volume. Over the course of the project, the team had built up a substantial 
              data engineering code base. After many challenges with the initial study direction, 
              the team decided to refactor and rebuild the code base into a user-friendly public 
