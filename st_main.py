@@ -35,7 +35,7 @@ def render_landing_page():
     st.image("./interface/images/workflow.png")
 
 PAGES = {
-    "Landing page": render_landing_page,
+    "Introduction": render_landing_page,
     "Data Pipeline": st_data,
     "Experiment & Evaluation Harness": st_eval_harness,
     "Demo: Weather Data": st_demo_weather,
