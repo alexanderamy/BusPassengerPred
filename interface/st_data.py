@@ -10,10 +10,16 @@ def st_data():
     to collect once-a-minute observations of the location, occupancy, and other data reported by NYC buses via the MTA's
     [BusTime API](https://bustime.mta.info/wiki/Developers/Index).
 
-    Due to the fixed once-a-minute collection intervals, one of our first preprocessing steps was to filter the data such that each route segment
+    The data from the BusWatcher API is collected minute-by-minute. While this could potentially 
+    embed time-dimensional information, we found it mostly added noise to the passenger count
+    observations. And so one of our first preprocessing steps was to filter the data such that each route segment
     (i.e., the space between stops) corresponded to at most one observation per unique trip ID (i.e., the sequence of stops a particular vehicle is 
     scheduled to make on a given day). We made this decision based on the assumption that passenger count (our ultimate regression target) does not 
-    change between stops. The other major data filtering we did was to remove vehicles that never report passenger count. 
+    change between stops. Additionally, we removed vehicles that never report passenger count. 
+    
+    This reduced the number of training instances by a magnitude, which can be observed in the 
+    single route visualization below. Notice that the processed data is sparser and more evenly 
+    distributed spatially. 
     """)
 
     st.write("""
@@ -105,10 +111,12 @@ def st_data():
 
     st.write("""
     ## Data Modeling
-    The next important decision we made was to think about the two directions a bus could travel along a given route 
-    (e.g., uptown vs. downtown) as two distinct routes. 
-    This decision facilitated a shift from 100+-dimensional one-hot encodings of segment IDs, 
-    to one-dimensional ordinal representations corresponding to their positions along a particular 
-    route in a given direction that dramatically reduced the training times and increased the interpretability of our downstream models. 
+    Further reduction to data size was accomplished by transforming the 100-vector segment-id 
+    attributes down to 2-vector representation. In the raw form, segments have direction and 
+    location, and so a 50 stop route would have a 100-vector. We instead decided to view each 
+    direction as a distinct route. This decision facilitated a shift from 100+-dimensional 
+    one-hot encodings of segment IDs, to one-dimensional ordinal representations corresponding  
+    to their positions along a particular route. This dramatically reduced the training times and 
+    increased the interpretability of our downstream models. 
     """)
     
